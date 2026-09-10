@@ -1671,9 +1671,12 @@ $('addClient').addEventListener('click', function(){
   S.clients.push(c); save(); push('saveClient', c); renderAll(); toast('Client added');
 });
 $('connectBtn').addEventListener('click', function(){
-  var u = $('apiUrl').value.trim();
-  if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(u)){
-    $('connMsg').innerHTML = '<div class="note bad">That does not look like an Apps Script <code>/exec</code> URL. It should look like <code>https://script.google.com/macros/s/AKfy…/exec</code>.</div>';
+  var u = $('apiUrl').value.trim().replace(/\/+$/, '');
+  if (/\/dev$/.test(u)) u = u.replace(/\/dev$/, '/exec');
+  if (!/^https:\/\/script\.google\.com\/(a\/macros\/[^\/]+|macros)\/s\/[^\/]+\/exec/.test(u)){
+    $('connMsg').innerHTML = '<div class="note bad">That does not look like an Apps Script <code>/exec</code> URL.' +
+      '<br>Personal accounts: <code>https://script.google.com/macros/s/AKfy…/exec</code>' +
+      '<br>Workspace accounts: <code>https://script.google.com/a/macros/yourdomain.com/s/AKfy…/exec</code></div>';
     return;
   }
   S.apiUrl = u; save();
@@ -1682,7 +1685,10 @@ $('connectBtn').addEventListener('click', function(){
     $('connMsg').innerHTML = '<div class="note ok"><b>Connected.</b> '+activeClients().length+' active clients, '+S.summaries.length+' summaries, '+S.tests.length+' tests loaded from the sheet.</div>';
   }).catch(function(e){
     $('connMsg').innerHTML = '<div class="note bad"><b>Could not reach the web app.</b> '+esc(e.message)+
-      '<br>Check: deployed as a <b>Web app</b>, “Execute as: Me”, “Who has access: <b>Anyone</b>”, and you copied the <code>/exec</code> URL.</div>';
+      '<ul class="bare"><li>Deployed as a <b>Web app</b> (not an API executable or add-on).</li>' +
+      '<li><b>Execute as: Me</b>.</li>' +
+      '<li><b>Who has access: Anyone</b> — “Anyone within Grnded Agency” will NOT work here, because the browser cannot send your Google login to it from another site.</li>' +
+      '<li>After any script edit: <b>Manage deployments → pencil → New version → Deploy</b>.</li></ul></div>';
   });
 });
 $('openSheet').addEventListener('click', function(){
