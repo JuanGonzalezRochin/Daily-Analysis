@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grnded · Client Performance OS</title>
+<meta name="description" content="Daily operating dashboard for client performance & fulfillment.">
+<style>
+/* ============================== TOKENS ============================== */
+:root{
+  --bg:#f6f7f9; --bg-2:#ffffff; --bg-3:#eef0f4; --bg-inset:#f0f2f6;
+  --fg:#12161d; --fg-2:#4a5262; --fg-3:#79808f;
+  --line:#dfe3ea; --line-2:#c9cfda;
+  --accent:#2f5bea; --accent-fg:#ffffff; --accent-soft:#e6ecfe;
+  --ok:#0f7a52; --ok-soft:#dff5ea; --ok-line:#8fd6b8;
+  --warn:#a35c00; --warn-soft:#fdefd6; --warn-line:#e9bd6a;
+  --bad:#b3261e; --bad-soft:#fde8e6; --bad-line:#efa9a3;
+  --shadow:0 1px 2px rgba(16,22,32,.06), 0 8px 24px -12px rgba(16,22,32,.18);
+  --radius:12px; --radius-sm:8px;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+:root[data-theme="dark"], :root:not([data-theme="light"]) {
+  --dm:1;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1015; --bg-2:#151a22; --bg-3:#1c222c; --bg-inset:#11151c;
+    --fg:#e8ecf3; --fg-2:#a3acbb; --fg-3:#727b8a;
+    --line:#242b36; --line-2:#333c4a;
+    --accent:#5b82ff; --accent-fg:#0d1015; --accent-soft:#1a2440;
+    --ok:#4ad3a0; --ok-soft:#0f2a20; --ok-line:#1f5c45;
+    --warn:#f0b95c; --warn-soft:#2c2110; --warn-line:#5f4a1c;
+    --bad:#ff8378; --bad-soft:#2e1614; --bad-line:#6b2d27;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1015; --bg-2:#151a22; --bg-3:#1c222c; --bg-inset:#11151c;
+  --fg:#e8ecf3; --fg-2:#a3acbb; --fg-3:#727b8a;
+  --line:#242b36; --line-2:#333c4a;
+  --accent:#5b82ff; --accent-fg:#0d1015; --accent-soft:#1a2440;
+  --ok:#4ad3a0; --ok-soft:#0f2a20; --ok-line:#1f5c45;
+  --warn:#f0b95c; --warn-soft:#2c2110; --warn-line:#5f4a1c;
+  --bad:#ff8378; --bad-soft:#2e1614; --bad-line:#6b2d27;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+}
+
+/* ============================== BASE ============================== */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:var(--sans); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{margin:0; font-weight:650; letter-spacing:-.011em; line-height:1.25}
+p{margin:0}
+button{font:inherit; color:inherit; cursor:pointer}
+input,select,textarea{font:inherit; color:inherit}
+[hidden]{display:none !important}
+a{color:var(--accent)}
+
+/* ============================== LAYOUT ============================== */
+.wrap{max-width:1180px; margin:0 auto; padding:0 16px}
+
+header.top{
+  position:sticky; top:0; z-index:50;
+  background:var(--bg);
+  background:color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter:saturate(1.6) blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.top-in{display:flex; align-items:center; gap:14px; padding-block:12px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:10px; margin-right:auto; min-width:0}
+.mark{
+  width:30px;height:30px;border-radius:8px;flex:0 0 auto;
+  background:linear-gradient(145deg,var(--accent),color-mix(in srgb,var(--accent) 55%, #12d3a0));
+  display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;letter-spacing:-.04em;
+}
+.brand b{font-size:15px; font-weight:680; letter-spacing:-.015em; white-space:nowrap}
+.brand span{color:var(--fg-3); font-size:12.5px; white-space:nowrap}
+.top-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 10px;border-radius:999px;border:1px solid var(--line-2);
+  background:var(--bg-2); font-size:12px; font-weight:600; color:var(--fg-2);
+  white-space:nowrap;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--fg-3);flex:0 0 auto}
+.pill.live{border-color:var(--ok-line); background:var(--ok-soft); color:var(--ok)}
+.pill.live .dot{background:var(--ok)}
+.pill.off{border-color:var(--warn-line); background:var(--warn-soft); color:var(--warn)}
+.pill.off .dot{background:var(--warn)}
+.pill.err{border-color:var(--bad-line); background:var(--bad-soft); color:var(--bad)}
+.pill.err .dot{background:var(--bad)}
+
+nav.tabs{border-bottom:1px solid var(--line); background:var(--bg-2)}
+.tabs-in{display:flex; gap:2px; overflow-x:auto; scrollbar-width:none}
+.tabs-in::-webkit-scrollbar{display:none}
+.tab{
+  border:0;background:none;padding:12px 14px;font-size:13.5px;font-weight:600;
+  color:var(--fg-3); border-bottom:2px solid transparent; white-space:nowrap;
+}
+.tab:hover{color:var(--fg-2)}
+.tab[aria-selected="true"]{color:var(--fg); border-bottom-color:var(--accent)}
+.tab .badge{
+  display:inline-block;min-width:17px;padding:0 5px;margin-left:6px;border-radius:999px;
+  background:var(--bg-3); color:var(--fg-2); font-size:10.5px; font-weight:700; line-height:17px; text-align:center;
+}
+.tab .badge.hot{background:var(--bad); color:#fff}
+
+main{padding-block:22px 64px}
+.panel{display:none}
+.panel.on{display:block}
+
+/* ============================== CARDS ============================== */
+.card{
+  background:var(--bg-2); border:1px solid var(--line);
+  border-radius:var(--radius); box-shadow:var(--shadow);
+}
+.card + .card{margin-top:14px}
+.card-hd{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:14px 16px; border-bottom:1px solid var(--line);
+}
+.card-hd h3{font-size:14px}
+.card-hd .sub{font-size:12.5px;color:var(--fg-3)}
+.card-bd{padding:16px}
+.card-bd.tight{padding:10px 16px 14px}
+
+.grid{display:grid; gap:14px}
+@media(min-width:860px){
+  .grid.two{grid-template-columns:1fr 1fr}
+  .grid.side{grid-template-columns:minmax(0,1fr) minmax(0,420px); align-items:start}
+  .grid.side > div:last-child{position:sticky; top:104px}
+}
+
+/* ============================== HERO ============================== */
+.hero{
+  border-radius:var(--radius); border:1px solid var(--line); box-shadow:var(--shadow);
+  background:
+    radial-gradient(900px 260px at 8% -30%, color-mix(in srgb,var(--accent) 16%, transparent), transparent 70%),
+    var(--bg-2);
+  padding:18px; margin-bottom:16px;
+}
+.hero-top{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.hero h1{font-size:20px; letter-spacing:-.02em}
+.hero .date{color:var(--fg-3); font-size:13px; margin-top:2px}
+.hero .standard{
+  margin-top:14px;padding:12px 14px;border-radius:var(--radius-sm);
+  background:var(--bg-inset); border:1px solid var(--line);
+  font-size:13.5px; color:var(--fg-2);
+}
+.hero .standard b{color:var(--fg)}
+.prog{margin-left:auto; text-align:right; min-width:150px}
+.prog .n{font-size:26px;font-weight:720;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.prog .l{font-size:11.5px;color:var(--fg-3);text-transform:uppercase;letter-spacing:.07em;font-weight:650}
+.bar{height:6px;border-radius:999px;background:var(--bg-3);overflow:hidden;margin-top:8px;width:100%}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 50%,#12d3a0));border-radius:999px;transition:width .35s ease}
+
+/* ============================== STATUS BOARD ============================== */
+.board{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
+.sc{
+  border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px;
+  background:var(--bg-2); text-align:left; width:100%; display:block;
+  transition:border-color .15s, transform .15s;
+}
+.sc:hover{border-color:var(--line-2); transform:translateY(-1px)}
+.sc .nm{font-weight:650; font-size:14px; display:flex; align-items:center; gap:7px}
+.sc .st{margin-top:7px; font-size:11px; font-weight:750; letter-spacing:.05em; text-transform:uppercase}
+.sc .mt{margin-top:7px; font-size:12px; color:var(--fg-3); display:flex; gap:10px; flex-wrap:wrap; font-variant-numeric:tabular-nums}
+.sc[data-s="hold"]{border-left:3px solid var(--ok)}   .sc[data-s="hold"] .st{color:var(--ok)}
+.sc[data-s="action"]{border-left:3px solid var(--warn)} .sc[data-s="action"] .st{color:var(--warn)}
+.sc[data-s="tech"]{border-left:3px solid var(--bad)}   .sc[data-s="tech"] .st{color:var(--bad)}
+.sc[data-s="none"]{border-left:3px solid var(--line-2)} .sc[data-s="none"] .st{color:var(--fg-3)}
+
+/* ============================== CHECKLIST ============================== */
+.block{margin-top:16px}
+.block-hd{display:flex;align-items:baseline;gap:10px;margin:0 0 9px;padding:0 2px;flex-wrap:wrap}
+.block-hd h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--fg-3);font-weight:750}
+.block-hd .hdnote{font-size:12.5px;color:var(--fg-3);flex:1;min-width:0}
+.block-hd .cnt{margin-left:auto;font-size:12px;color:var(--fg-3);font-variant-numeric:tabular-nums}
+
+.tk{
+  display:flex; gap:11px; align-items:flex-start; padding:11px 14px;
+  border-top:1px solid var(--line); cursor:pointer; transition:background .12s;
+}
+.tk:first-child{border-top:0}
+.tk:hover{background:var(--bg-inset)}
+.box{
+  width:19px;height:19px;flex:0 0 auto;margin-top:1px;border-radius:6px;
+  border:1.5px solid var(--line-2); background:var(--bg-2);
+  display:grid;place-items:center; transition:all .15s;
+}
+.box svg{width:11px;height:11px;opacity:0;stroke:var(--accent-fg);stroke-width:3.2;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:opacity .12s}
+.tk.done .box{background:var(--accent);border-color:var(--accent)}
+.tk.done .box svg{opacity:1}
+.tk .txt{min-width:0;flex:1}
+.tk .t{display:block;font-size:14px;font-weight:600}
+.tk .d{display:block;font-size:12.7px;color:var(--fg-3);margin-top:3px;max-width:78ch}
+.tk.done .t{color:var(--fg-3); text-decoration:line-through; text-decoration-color:var(--line-2)}
+.tk.done .d{opacity:.6}
+
+/* client accordion */
+.cl{border-top:1px solid var(--line)}
+.cl:first-child{border-top:0}
+.cl-hd{
+  display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;
+  padding:12px 14px;text-align:left; transition:background .12s;
+}
+.cl-hd:hover{background:var(--bg-inset)}
+.cl-hd .ring{
+  width:26px;height:26px;flex:0 0 auto;border-radius:50%;
+  display:grid;place-items:center;font-size:10px;font-weight:750;
+  background:var(--bg-3); color:var(--fg-3); font-variant-numeric:tabular-nums;
+}
+.cl-hd .ring.full{background:var(--ok-soft);color:var(--ok)}
+.cl-hd .nm{font-weight:650;font-size:14.5px;flex:1;min-width:0}
+.cl-hd .chev{color:var(--fg-3);transition:transform .2s; flex:0 0 auto}
+.cl[open] .cl-hd .chev, .cl.open .cl-hd .chev{transform:rotate(90deg)}
+.cl-bd{padding:0 0 8px 0; background:var(--bg-inset); border-top:1px solid var(--line)}
+.cl-bd .tk{padding-left:22px}
+.cl-bd .tk:first-child{border-top:0}
+.st-chip{
+  font-size:10px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;border:1px solid;white-space:nowrap;
+}
+.st-chip.hold{color:var(--ok);background:var(--ok-soft);border-color:var(--ok-line)}
+.st-chip.action{color:var(--warn);background:var(--warn-soft);border-color:var(--warn-line)}
+.st-chip.tech{color:var(--bad);background:var(--bad-soft);border-color:var(--bad-line)}
+.st-chip.none{color:var(--fg-3);background:var(--bg-3);border-color:var(--line-2)}
+
+/* ============================== FORMS ============================== */
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;font-weight:670;color:var(--fg-2);margin-bottom:5px;letter-spacing:.005em}
+.field .hint{font-weight:500;color:var(--fg-3);font-size:11.5px}
+input[type=text],input[type=date],input[type=number],input[type=url],select,textarea{
+  width:100%;padding:9px 11px;border:1px solid var(--line-2);border-radius:var(--radius-sm);
+  background:var(--bg-2);color:var(--fg);outline:none;transition:border-color .15s, box-shadow .15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{resize:vertical;min-height:60px;line-height:1.5}
+.row{display:grid;gap:12px}
+@media(min-width:640px){ .row.c2{grid-template-columns:1fr 1fr} .row.c3{grid-template-columns:1fr 1fr 1fr} }
+
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{
+  flex:1 1 150px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--line-2);
+  background:var(--bg-2);font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--fg-3); transition:all .15s;
+}
+.seg button[aria-pressed="true"][data-v="hold"]{background:var(--ok-soft);border-color:var(--ok-line);color:var(--ok)}
+.seg button[aria-pressed="true"][data-v="action"]{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+.seg button[aria-pressed="true"][data-v="tech"]{background:var(--bad-soft);border-color:var(--bad-line);color:var(--bad)}
+
+.btn{
+  display:inline-flex;align-items:center;gap:7px;justify-content:center;
+  padding:9px 14px;border-radius:var(--radius-sm);border:1px solid var(--line-2);
+  background:var(--bg-2);font-size:13px;font-weight:620;transition:all .15s;white-space:nowrap;
+}
+.btn:hover{border-color:var(--fg-3)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.sm{padding:6px 10px;font-size:12px}
+.btn.danger{color:var(--bad);border-color:var(--bad-line)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+
+.flag{font-size:12px;font-weight:650;margin-top:5px;display:flex;align-items:center;gap:6px}
+.flag.ok{color:var(--ok)} .flag.warn{color:var(--warn)} .flag.bad{color:var(--bad)} .flag.mut{color:var(--fg-3)}
+
+/* ============================== PREVIEW / OUTPUT ============================== */
+.out{
+  font-family:var(--mono); font-size:12.5px; line-height:1.72; white-space:pre-wrap;
+  background:var(--bg-inset); border:1px solid var(--line); border-radius:var(--radius-sm);
+  padding:14px; overflow-x:auto; color:var(--fg-2); margin:0;
+}
+.out b{color:var(--fg);font-weight:700}
+
+/* ============================== TABLE ============================== */
+.tblwrap{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:840px}
+th{
+  text-align:left;padding:9px 12px;background:var(--bg-inset);border-bottom:1px solid var(--line);
+  font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-3);font-weight:700;white-space:nowrap;
+}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--bg-inset)}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1px solid}
+.tag.run{color:var(--accent);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 35%, transparent)}
+.tag.due{color:var(--warn);background:var(--warn-soft);border-color:var(--warn-line)}
+.tag.won{color:var(--ok);background:var(--ok-soft);border-color:var(--ok-line)}
+.tag.lost{color:var(--bad);background:var(--bad-soft);border-color:var(--bad-line)}
+.tag.flat{color:var(--fg-3);background:var(--bg-3);border-color:var(--line-2)}
+
+/* ============================== MISC ============================== */
+.empty{padding:34px 18px;text-align:center;color:var(--fg-3);font-size:13.5px}
+.empty b{display:block;color:var(--fg-2);font-size:14.5px;margin-bottom:4px}
+.note{
+  padding:11px 13px;border-radius:var(--radius-sm);border:1px solid var(--line);
+  background:var(--bg-inset);font-size:12.7px;color:var(--fg-2);
+}
+.note.warn{border-color:var(--warn-line);background:var(--warn-soft);color:var(--warn)}
+.note.bad{border-color:var(--bad-line);background:var(--bad-soft);color:var(--bad)}
+.note.ok{border-color:var(--ok-line);background:var(--ok-soft);color:var(--ok)}
+ul.bare{margin:6px 0 0;padding-left:18px;font-size:12.7px;color:var(--fg-2)}
+ul.bare li{margin:3px 0}
+
+details.avoid summary{cursor:pointer;font-size:12.5px;color:var(--fg-3);font-weight:620;list-style:none;padding:2px 0}
+details.avoid summary::-webkit-details-marker{display:none}
+details.avoid summary::before{content:"▸ ";color:var(--fg-3)}
+details.avoid[open] summary::before{content:"▾ "}
+
+.toast{
+  position:fixed;left:50%;bottom:22px;transform:translate(-50%,26px);
+  background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:999px;
+  font-size:13px;font-weight:620;box-shadow:var(--shadow);opacity:0;
+  transition:all .25s cubic-bezier(.2,.9,.3,1);pointer-events:none;z-index:200;max-width:90vw;text-align:center;
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+.fine{font-size:11.7px;color:var(--fg-3);margin-top:6px}
+kbd{font-family:var(--mono);font-size:11px;background:var(--bg-3);border:1px solid var(--line-2);border-bottom-width:2px;border-radius:5px;padding:1px 5px}
+code{font-family:var(--mono);font-size:12px;background:var(--bg-3);padding:1px 5px;border-radius:4px;word-break:break-all}
+
+/* ============================== REPORT ============================== */
+.rep{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);padding:26px}
+.rep h2{font-size:19px;letter-spacing:-.02em}
+.rep .meta{color:var(--fg-3);font-size:12.5px;margin-top:3px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.rep section{margin-top:17px}
+.rep section h4{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--fg-3);margin-bottom:5px}
+.rep section p{font-size:14px;color:var(--fg);white-space:pre-wrap}
+.rep .snap{display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:8px}
+.rep .snap div{background:var(--bg-inset);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px}
+.rep .snap span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-3);font-weight:700}
+.rep .snap p{font-size:13.5px;margin-top:3px}
+
+@media print{
+  header.top,nav.tabs,.no-print{display:none !important}
+  body{background:#fff;color:#000}
+  .rep{border:0;padding:0}
+  main{padding:0}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <div class="mark">G</div>
+      <div>
+        <b>Client Performance OS</b><br>
+        <span>Grnded · Daily operating process</span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="pill off" id="connPill"><i class="dot"></i><span id="connTxt">Not connected</span></span>
+      <button class="btn sm" id="syncBtn" title="Pull the latest from Google Sheets">Sync</button>
+      <button class="btn sm" id="themeBtn" title="Toggle light / dark" aria-label="Toggle light or dark theme"><span id="themeIcon">☾</span></button>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap tabs-in" role="tablist">
+    <button class="tab" role="tab" data-p="today"   aria-selected="true">Today</button>
+    <button class="tab" role="tab" data-p="review"  aria-selected="false">Client Review</button>
+    <button class="tab" role="tab" data-p="tests"   aria-selected="false">Test Log <span class="badge" id="tstBadge">0</span></button>
+    <button class="tab" role="tab" data-p="friday"  aria-selected="false">Friday Report</button>
+    <button class="tab" role="tab" data-p="settings" aria-selected="false">Settings</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- ============================ TODAY ============================ -->
+<section class="panel on" id="p-today">
+  <div class="hero">
+    <div class="hero-top">
+      <div>
+        <h1 id="heroGreet">Good morning, Juan</h1>
+        <div class="date" id="heroDate"></div>
+      </div>
+      <div class="prog">
+        <div class="n"><span id="progN">0</span><span style="color:var(--fg-3);font-size:16px">/<span id="progT">0</span></span></div>
+        <div class="l">Today complete</div>
+        <div class="bar"><i id="progBar" style="width:0%"></i></div>
+      </div>
+    </div>
+    <div class="standard">
+      <b>The standard:</b> “Anything we need to address today?” — you should be able to answer that confidently
+      because every active client has already been reviewed from ad click through booked appointment.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd">
+      <h3>Client status board</h3>
+      <span class="sub" id="boardSub">today's call on each active funnel</span>
+    </div>
+    <div class="card-bd tight"><div class="board" id="board"></div></div>
+  </div>
+
+  <div class="block" id="blkFriday" hidden>
+    <div class="block-hd">
+      <h2>Friday</h2><span class="hdnote">Client-facing performance report</span>
+    </div>
+    <div class="card" id="fridayTasks"></div>
+  </div>
+
+  <div class="block">
+    <div class="block-hd">
+      <h2>Morning · Existing client performance &amp; optimization</h2>
+      <span class="hdnote">Know the health of every active funnel and identify today’s required actions.</span>
+      <span class="cnt" id="cntMorning"></span>
+    </div>
+    <div class="card" id="morningGlobal"></div>
+    <div class="card" id="clientList" style="margin-top:10px"></div>
+  </div>
+
+  <div class="block">
+    <div class="block-hd">
+      <h2>After morning review · Quick decision discussion</h2>
+      <span class="hdnote">Bring only items requiring discussion or approval.</span>
+      <span class="cnt" id="cntDiscuss"></span>
+    </div>
+    <div class="card">
+      <div class="card-bd tight" id="discussList" style="padding-top:14px"></div>
+      <div id="discussTasks"></div>
+    </div>
+    <details class="avoid" style="margin-top:9px;padding:0 4px">
+      <summary>What NOT to bring to the morning discussion</summary>
+      <ul class="bare">
+        <li>A raw AI-generated report with no personal analysis.</li>
+        <li>A list of 10 possible things we could change.</li>
+        <li>Every metric from every platform when nothing is wrong.</li>
+        <li>A question you could answer by checking the platform yourself.</li>
+        <li>A page change before the testing threshold just because one day moved.</li>
+        <li>Multiple simultaneous page changes that make it impossible to know what worked.</li>
+      </ul>
+    </details>
+  </div>
+
+  <div class="block">
+    <div class="block-hd">
+      <h2>Afternoon · Build &amp; execute</h2>
+      <span class="hdnote">Approved optimizations, technical work, new builds.</span>
+      <span class="cnt" id="cntAfternoon"></span>
+    </div>
+    <div class="card" id="afternoonTasks"></div>
+  </div>
+</section>
+
+<!-- ============================ CLIENT REVIEW ============================ -->
+<section class="panel" id="p-review">
+  <div class="grid side">
+    <div>
+      <div class="card">
+        <div class="card-hd">
+          <h3>Morning summary builder</h3>
+          <span class="sub">short enough to scan · one recommendation only</span>
+        </div>
+        <div class="card-bd">
+          <div class="row c2">
+            <div class="field">
+              <label for="sClient">Client</label>
+              <select id="sClient"></select>
+            </div>
+            <div class="field">
+              <label for="sDate">Date</label>
+              <input type="date" id="sDate">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Status</label>
+            <div class="seg" id="sStatus">
+              <button type="button" data-v="hold"   aria-pressed="false">No action / hold</button>
+              <button type="button" data-v="action" aria-pressed="false">Action required</button>
+              <button type="button" data-v="tech"   aria-pressed="false">Technical issue</button>
+            </div>
+            <div class="flag mut" id="statusHelp">Pick a status — it drives the discussion list and the status board.</div>
+          </div>
+
+          <div class="field">
+            <label for="sAd">Ad <span class="hint">— healthy / watch / action + one short reason</span></label>
+            <input type="text" id="sAd" placeholder="Healthy — CTR steady at 1.9%, CPC flat, frequency 1.4">
+          </div>
+
+          <div class="row c2">
+            <div class="field">
+              <label for="sLpRate">Landing page conversion rate <span class="hint">— target 15%+</span></label>
+              <input type="number" id="sLpRate" step="0.1" min="0" max="100" placeholder="18.2">
+              <div class="flag mut" id="lpFlag">Enter the rate to check it against the 15% benchmark.</div>
+            </div>
+            <div class="field">
+              <label for="sLp">Landing page note <span class="hint">— hold or action</span></label>
+              <input type="text" id="sLp" placeholder="Hold — above target, no change">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="sAuto">Automation <span class="hint">— working / not working + key issue</span></label>
+            <input type="text" id="sAuto" placeholder="Leads entering correctly; email #2 weak sales-page click-through">
+          </div>
+
+          <div class="row c2">
+            <div class="field">
+              <label for="sBook">Booking rate <span class="hint">— target 5–10%</span></label>
+              <input type="number" id="sBook" step="0.1" min="0" max="100" placeholder="2.9">
+              <div class="flag mut" id="bookFlag">Enter the booking rate to check it against 5–10%.</div>
+            </div>
+            <div class="field">
+              <label for="sVis">New sales-page visitors since last test <span class="hint">— decide at 30</span></label>
+              <input type="number" id="sVis" step="1" min="0" placeholder="34">
+              <div class="flag mut" id="visFlag">Under 30 = hold unless there is a technical issue.</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="sSales">Sales page note</label>
+            <input type="text" id="sSales" placeholder="34 visitors since last test; 2.9% booking rate">
+          </div>
+
+          <div class="field">
+            <label for="sBeh">Behaviour <span class="hint">— the single most relevant heat-map finding</span></label>
+            <input type="text" id="sBeh" placeholder="Users reach the offer but drop before the calendar">
+          </div>
+
+          <div class="field">
+            <label for="sRec">Recommendation <span class="hint">— ONE specific change, or “No change”</span></label>
+            <input type="text" id="sRec" placeholder="Move the calendar directly below the offer">
+            <div class="flag mut" id="recFlag"></div>
+          </div>
+
+          <div class="field">
+            <label for="sWhy">Why <span class="hint">— 1–2 sentences</span></label>
+            <textarea id="sWhy" rows="2" placeholder="Past 30 visitors, booking is below target, and behaviour data supports reducing friction before the calendar."></textarea>
+          </div>
+
+          <div class="field">
+            <label for="sAct">Today's action</label>
+            <input type="text" id="sAct" placeholder="Implement this single change after approval and reset the 30-visitor count">
+          </div>
+
+          <div class="btns">
+            <button class="btn pri" id="saveSum">Save summary</button>
+            <button class="btn" id="copySum">Copy</button>
+            <button class="btn" id="saveAndTest">Save + log as test</button>
+            <button class="btn" id="clearSum">Clear</button>
+          </div>
+          <div class="fine">Saving writes the row to the <b>Summaries</b> tab of your Google Sheet and marks the client reviewed for today.</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-hd"><h3>Live preview</h3><span class="sub">what you paste into the discussion</span></div>
+        <div class="card-bd"><pre class="out" id="sumPreview">Pick a client to start.</pre></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <h3>Saved summaries</h3>
+          <select id="sumFilter" style="width:auto;margin-left:auto;padding:5px 8px;font-size:12px">
+            <option value="today">Today</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div class="card-bd tight" id="sumList"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ TEST LOG ============================ -->
+<section class="panel" id="p-tests">
+  <div class="card">
+    <div class="card-hd">
+      <h3>Active test record</h3>
+      <span class="sub">what changed · when · why · what's next</span>
+      <div style="margin-left:auto" class="btns">
+        <select id="tFilter" style="width:auto;padding:6px 9px;font-size:12px">
+          <option value="open">Open tests</option>
+          <option value="due">At decision point</option>
+          <option value="closed">Closed</option>
+          <option value="all">All</option>
+        </select>
+        <button class="btn sm pri" id="newTest">+ New test</button>
+      </div>
+    </div>
+    <div class="card-bd tight" id="testTable" style="padding-top:14px"></div>
+  </div>
+
+  <div class="card" id="testForm" hidden>
+    <div class="card-hd"><h3 id="testFormTitle">New test</h3></div>
+    <div class="card-bd">
+      <input type="hidden" id="tId">
+      <div class="row c3">
+        <div class="field">
+          <label for="tClient">Client</label>
+          <select id="tClient"></select>
+        </div>
+        <div class="field">
+          <label for="tStage">Funnel stage</label>
+          <select id="tStage">
+            <option>Ad</option><option>Landing Page</option><option>Email / SMS Automation</option>
+            <option>Sales Page</option><option>Booking Process</option><option>Tracking / Technical</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="tStart">Start date</label>
+          <input type="date" id="tStart">
+        </div>
+      </div>
+      <div class="field">
+        <label for="tChange">Test / change <span class="hint">— one variable</span></label>
+        <input type="text" id="tChange" placeholder="Moved the calendar directly below the offer">
+      </div>
+      <div class="field">
+        <label for="tWhy">Why we changed it</label>
+        <textarea id="tWhy" rows="2" placeholder="Booking rate 2.9% at 34 visitors; heat maps show drop before the calendar."></textarea>
+      </div>
+      <div class="row c3">
+        <div class="field">
+          <label for="tDecision">Decision point</label>
+          <input type="text" id="tDecision" placeholder="30 new sales-page visitors">
+        </div>
+        <div class="field">
+          <label for="tVis">Visitors / data since start</label>
+          <input type="number" id="tVis" min="0" step="1" placeholder="0">
+          <div class="flag mut" id="tVisFlag"></div>
+        </div>
+        <div class="field">
+          <label for="tStatus">Status</label>
+          <select id="tStatus">
+            <option value="running">Running — collecting data</option>
+            <option value="due">At decision point</option>
+            <option value="improved">Closed — improved</option>
+            <option value="declined">Closed — declined</option>
+            <option value="flat">Closed — no clear change</option>
+          </select>
+        </div>
+      </div>
+      <div class="row c2">
+        <div class="field">
+          <label for="tResult">Result so far</label>
+          <textarea id="tResult" rows="2" placeholder="Booking rate 6.1% over 31 visitors since the change."></textarea>
+        </div>
+        <div class="field">
+          <label for="tNext">Next step</label>
+          <textarea id="tNext" rows="2" placeholder="Keep the new layout; next test is the headline above the offer."></textarea>
+        </div>
+      </div>
+      <div class="btns">
+        <button class="btn pri" id="saveTest">Save test</button>
+        <button class="btn" id="cancelTest">Cancel</button>
+        <button class="btn danger" id="delTest" hidden>Delete</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FRIDAY REPORT ============================ -->
+<section class="panel" id="p-friday">
+  <div class="card no-print">
+    <div class="card-hd">
+      <h3>Friday client performance report</h3>
+      <span class="sub">built from this week's daily summaries and test log</span>
+    </div>
+    <div class="card-bd">
+      <div class="row c3">
+        <div class="field">
+          <label for="fClient">Client</label>
+          <select id="fClient"></select>
+        </div>
+        <div class="field">
+          <label for="fWeek">Week ending (Friday)</label>
+          <input type="date" id="fWeek">
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn pri" id="buildRep" style="width:100%">Build from week's data</button>
+        </div>
+      </div>
+      <div class="note" id="repSource">Pick a client and week, then build — it pulls every summary logged in that Mon–Fri window plus any test activity.</div>
+
+      <div style="margin-top:14px">
+        <div class="row c2">
+          <div class="field"><label for="rAds">Snapshot · Ads</label><input type="text" id="rAds"></div>
+          <div class="field"><label for="rLp">Snapshot · Landing page</label><input type="text" id="rLp"></div>
+        </div>
+        <div class="row c2">
+          <div class="field"><label for="rAuto">Snapshot · Nurture / automation</label><input type="text" id="rAuto"></div>
+          <div class="field"><label for="rSales">Snapshot · Sales / booking page</label><input type="text" id="rSales"></div>
+        </div>
+        <div class="field"><label for="rLearn">What we learned this week</label><textarea id="rLearn" rows="3"></textarea></div>
+        <div class="field"><label for="rTests">Tests or improvements made — and why</label><textarea id="rTests" rows="3"></textarea></div>
+        <div class="field"><label for="rResults">Results so far <span class="hint">— improved / declined / still collecting</span></label><textarea id="rResults" rows="2"></textarea></div>
+        <div class="field"><label for="rNext">Next action or test</label><textarea id="rNext" rows="2"></textarea></div>
+        <div class="field"><label for="rInsight">Insight worth preserving <span class="hint">— audience, pain point, messaging, objection or offer</span></label><textarea id="rInsight" rows="2"></textarea></div>
+      </div>
+
+      <div class="btns">
+        <button class="btn pri" id="saveRep">Save report</button>
+        <button class="btn" id="copyRep">Copy as text</button>
+        <button class="btn" id="printRep">Print / PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px">
+    <div class="rep" id="repPreview"></div>
+  </div>
+</section>
+
+<!-- ============================ SETTINGS ============================ -->
+<section class="panel" id="p-settings">
+  <div class="card">
+    <div class="card-hd"><h3>Google Sheet connection</h3><span class="sub">the shared record everyone can review</span></div>
+    <div class="card-bd">
+      <div class="field">
+        <label for="apiUrl">Apps Script Web App URL</label>
+        <input type="url" id="apiUrl" placeholder="https://script.google.com/macros/s/AKfy.../exec">
+        <div class="fine">Setup steps are in <code>README.md</code> next to this file. Paste the <code>/exec</code> URL, then Connect.</div>
+      </div>
+      <div class="btns">
+        <button class="btn pri" id="connectBtn">Connect &amp; sync</button>
+        <button class="btn" id="openSheet">Open the sheet</button>
+        <button class="btn" id="exportJson">Export backup (JSON)</button>
+      </div>
+      <div id="connMsg" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd">
+      <h3>Active clients</h3>
+      <button class="btn sm pri" id="addClient" style="margin-left:auto">+ Add client</button>
+    </div>
+    <div class="card-bd tight" id="clientAdmin"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd"><h3>Reference · decision rules</h3></div>
+    <div class="card-bd">
+      <div class="grid two">
+        <div class="note ok"><b>No action / hold</b><br>Within target, or a recent test hasn't accumulated enough data. State the reason briefly and keep collecting. Don't make unnecessary changes.</div>
+        <div class="note warn"><b>Action required</b><br>A decision threshold is reached, performance is below target, or behaviour data clearly supports a test. One specific change, why, and what you'll measure.</div>
+      </div>
+      <div class="note bad" style="margin-top:12px"><b>Technical issue</b><br>Tracking, forms, automations, links, events, redirects, calendars or data flow are broken. Diagnose and fix first — flag immediately, don't wait for a visitor threshold.</div>
+      <div class="note" style="margin-top:12px"><b>Testing rule</b><br>Change one meaningful variable at a time so we can understand what caused the result. Benchmarks: landing page <b>15%+</b>, booking <b>5–10%</b>, sales-page decision point at <b>30 new visitors</b>.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd"><h3>Local data</h3></div>
+    <div class="card-bd">
+      <p style="font-size:13px;color:var(--fg-2)">The dashboard keeps a local cache so it stays fast and usable if the sheet is briefly unreachable. Anything queued while offline is pushed on the next sync.</p>
+      <div class="btns" style="margin-top:11px">
+        <button class="btn" id="forcePull">Force pull from sheet</button>
+        <button class="btn danger" id="wipeLocal">Clear local cache</button>
+      </div>
+      <div class="fine" id="queueInfo"></div>
+    </div>
+  </div>
+</section>
+
+</main>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+"use strict";
+
+/* ==================================================================
+   1. CONSTANTS — the daily operating process, straight from the doc
+   ================================================================== */
+
+var GLOBAL_MORNING = [
+  { k:'m_report', t:'Pull the AI report for every active client',
+    d:'It is one input only. Your recommendation combines the report, platform data, behaviour data, technical checks and your own judgment.' },
+  { k:'m_tests', t:'Check the Test Log for decision points',
+    d:'Any test that has hit its threshold gets decided today, not next week.' }
+];
+
+var PER_CLIENT = [
+  { k:'ads', t:'Ads',
+    d:'Spend, CPM, CTR, CPC, frequency, link clicks and trend changes. Meaningful deterioration, improvement or anomaly? Does the creative/audience need attention or keep collecting?' },
+  { k:'lp', t:'Landing page',
+    d:'Visitors, conversions and conversion rate against the 15% target. Check Mouseflow heat maps, scroll depth, clicks and drop-off. If it needs a test, ONE specific change — no redesign.' },
+  { k:'auto', t:'Email / SMS automation',
+    d:'New leads entering the correct automation. Correct order and timing, no errors or broken links. Delivery, open, click and response. How many click through to the sales / booking page.' },
+  { k:'sales', t:'Sales / booking page',
+    d:'Visitors, booked appointments and booking rate against 5–10%. Count NEW visitors since the last test: 30+ means evaluate, under 30 means hold unless there is a technical issue.' },
+  { k:'beh', t:'Behaviour',
+    d:'The single most relevant heat-map / Mouseflow finding. Where exactly are people dropping?' },
+  { k:'qa', t:'Funnel & tracking QA',
+    d:'Ads point to the right page · forms submit and leads record · redirects and thank-you/sales pages work · contacts enter the right automation · emails/SMS send and links work · calendar books · pixels, events and UTMs fire · cross-platform discrepancies investigated.' },
+  { k:'diag', t:'Funnel diagnosis',
+    d:'One connected system, not separate platforms. Where is the largest leak right now and what is the most logical next action?' },
+  { k:'sum', t:'Set the status and write the summary',
+    d:'NO ACTION / HOLD, ACTION REQUIRED or TECHNICAL ISSUE — plus one recommendation, the why, and today’s action.', cta:'review' }
+];
+
+var DISCUSS = [
+  { k:'d_pack', t:'Pack the discussion list',
+    d:'Only clients flagged ACTION REQUIRED or TECHNICAL ISSUE. Healthy or collecting-data clients do not need a deep review.' },
+  { k:'d_one', t:'One prioritized recommendation per client',
+    d:'With the why and what will be measured. Not ten options, not raw data for someone else to interpret.' },
+  { k:'d_appr', t:'Capture the decisions',
+    d:'Note what was approved, changed or rejected so the afternoon build list is unambiguous.' }
+];
+
+var AFTERNOON = [
+  { k:'a_tech', t:'Fix flagged technical issues first',
+    d:'Diagnose, test with a live submission, confirm entry / send / links, then report when resolved.' },
+  { k:'a_impl', t:'Implement approved changes — one variable at a time',
+    d:'So we can understand what caused the result. No simultaneous page changes.' },
+  { k:'a_log', t:'Update the Test Log',
+    d:'What changed, when it changed, why, the decision point, and reset the visitor count on anything you touched.', cta:'tests' },
+  { k:'a_build', t:'Build & execute',
+    d:'New funnels, landing pages, automations, tracking, campaign setup, edits, technical work and research.' },
+  { k:'a_close', t:'End-of-day check',
+    d:'Every active client reviewed ad click → booked appointment. Test Log current. Tomorrow’s watch items noted.' }
+];
+
+var FRIDAY = [
+  { k:'f_rep', t:'Build the Friday Client Performance Report for every active client',
+    d:'Performance snapshot, what we learned, what we changed and why, results so far, next action, and one insight worth preserving. Not a data dump.', cta:'friday' }
+];
+
+var STATUS_LABEL = { hold:'No action / hold', action:'Action required', tech:'Technical issue' };
+var STATUS_FULL  = { hold:'NO ACTION / HOLD', action:'ACTION REQUIRED', tech:'TECHNICAL ISSUE' };
+var LP_TARGET = 15, BOOK_MIN = 5, BOOK_MAX = 10, VIS_GATE = 30;
+var LS = 'grnded_cpos_v1';
+
+/* ==================================================================
+   2. STATE
+   ================================================================== */
+
+var S = {
+  apiUrl:'', clients:[], tasks:{}, summaries:[], tests:[], reports:[],
+  queue:[], conn:'off', sheetUrl:'', theme:''
+};
+
+function today(){ return isoDay(new Date()); }
+function isoDay(d){
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+}
+function pad(n){ return (n<10?'0':'') + n; }
+function parseDay(s){ var p = String(s||'').split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+function uid(p){ return p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function num(v){ var n = parseFloat(v); return isNaN(n) ? null : n; }
+function $(id){ return document.getElementById(id); }
+function activeClients(){ return S.clients.filter(function(c){ return c.active !== false && c.active !== 'FALSE' && c.active !== 'false'; }); }
+
+function save(){
+  try { localStorage.setItem(LS, JSON.stringify({
+    apiUrl:S.apiUrl, clients:S.clients, tasks:S.tasks, summaries:S.summaries,
+    tests:S.tests, reports:S.reports, queue:S.queue, theme:S.theme
+  })); } catch(e){}
+}
+function load(){
+  try {
+    var raw = localStorage.getItem(LS); if (!raw) return;
+    var d = JSON.parse(raw);
+    ['apiUrl','clients','tasks','summaries','tests','reports','queue','theme'].forEach(function(k){
+      if (d[k] !== undefined) S[k] = d[k];
+    });
+  } catch(e){}
+}
+
+/* ==================================================================
+   3. API  (Apps Script web app; text/plain avoids a CORS preflight)
+   ================================================================== */
+
+function api(action, payload){
+  if (!S.apiUrl) return Promise.reject(new Error('no-url'));
+  return fetch(S.apiUrl, {
+    method:'POST', redirect:'follow',
+    headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action:action, payload:payload })
+  }).then(function(r){ return r.text(); }).then(function(t){
+    var j; try { j = JSON.parse(t); } catch(e){ throw new Error('Bad response from the web app. Re-deploy with access set to “Anyone”.'); }
+    if (!j.ok) throw new Error(j.error || 'Unknown error');
+    return j.data;
+  });
+}
+
+function setConn(state, text){
+  S.conn = state;
+  var p = $('connPill');
+  p.className = 'pill ' + (state==='live'?'live':state==='err'?'err':'off');
+  $('connTxt').textContent = text;
+}
+
+function push(action, payload){
+  // optimistic: always queue, then drain
+  S.queue.push({ action:action, payload:payload, at:Date.now() });
+  save(); renderQueue();
+  return drain();
+}
+
+var draining = false;
+function drain(){
+  if (draining || !S.apiUrl || !S.queue.length) return Promise.resolve();
+  draining = true;
+  var batch = S.queue.slice(0, 25);
+  return api('batch', batch.map(function(q){ return { action:q.action, payload:q.payload }; }))
+    .then(function(){
+      S.queue = S.queue.slice(batch.length);
+      save(); renderQueue();
+      setConn('live','Synced');
+      draining = false;
+      if (S.queue.length) return drain();
+    })
+    .catch(function(e){
+      draining = false;
+      setConn('err', 'Sync failed');
+      renderQueue();
+    });
+}
+
+function pull(){
+  if (!S.apiUrl) { setConn('off','Not connected'); return Promise.resolve(); }
+  setConn('off','Syncing…');
+  return api('bootstrap').then(function(d){
+    S.clients = d.clients || [];
+    S.summaries = d.summaries || [];
+    S.tests = d.tests || [];
+    S.reports = d.reports || [];
+    S.tasks = {};
+    (d.tasks || []).forEach(function(t){
+      if (t.done === true || t.done === 'TRUE' || t.done === 'true') S.tasks[t.key] = true;
+    });
+    save(); setConn('live','Live · Google Sheet'); renderAll();
+    return drain();
+  }).catch(function(e){
+    setConn('err', 'Offline — using cache');
+    renderAll();
+    throw e;
+  });
+}
+
+/* ==================================================================
+   4. TASKS
+   ================================================================== */
+
+function tkey(clientId, k){ return today() + '|' + (clientId || '_') + '|' + k; }
+function isDone(clientId, k){ return !!S.tasks[tkey(clientId,k)]; }
+function toggle(clientId, k){
+  var key = tkey(clientId,k), v = !S.tasks[key];
+  if (v) S.tasks[key] = true; else delete S.tasks[key];
+  save();
+  push('toggleTask', { date:today(), clientId:clientId || '_', taskKey:k, done:v });
+  renderToday();
+}
+
+function taskRow(clientId, def){
+  var done = isDone(clientId, def.k);
+  var cta = def.cta ? '<button class="btn sm no-print" data-goto="'+def.cta+'" style="margin-top:7px">Open '+(def.cta==='review'?'summary builder':def.cta==='tests'?'test log':'report builder')+' →</button>' : '';
+  return '<div class="tk'+(done?' done':'')+'" data-c="'+esc(clientId||'')+'" data-k="'+esc(def.k)+'">' +
+    '<span class="box"><svg viewBox="0 0 12 12"><path d="M1.8 6.3 L4.4 8.9 L10.2 3.1"/></svg></span>' +
+    '<span class="txt"><span class="t">'+esc(def.t)+'</span><span class="d">'+esc(def.d)+'</span>'+cta+'</span></div>';
+}
+
+function isFriday(){ return new Date().getDay() === 5; }
+
+function allTaskDefs(){
+  var list = [];
+  GLOBAL_MORNING.forEach(function(d){ list.push({c:null,d:d}); });
+  activeClients().forEach(function(c){
+    PER_CLIENT.forEach(function(d){ list.push({c:c.id,d:d}); });
+  });
+  DISCUSS.forEach(function(d){ list.push({c:null,d:d}); });
+  AFTERNOON.forEach(function(d){ list.push({c:null,d:d}); });
+  if (isFriday()) FRIDAY.forEach(function(d){ list.push({c:null,d:d}); });
+  return list;
+}
+
+/* ==================================================================
+   5. RENDER — TODAY
+   ================================================================== */
+
+function summaryFor(clientId, date){
+  for (var i=S.summaries.length-1; i>=0; i--){
+    var s = S.summaries[i];
+    if (String(s.clientId)===String(clientId) && String(s.date).slice(0,10)===date) return s;
+  }
+  return null;
+}
+
+function renderToday(){
+  var d = new Date();
+  var h = d.getHours();
+  $('heroGreet').textContent = (h<12?'Good morning':h<18?'Good afternoon':'Good evening') + ', Juan';
+  $('heroDate').textContent = d.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+
+  // progress
+  var defs = allTaskDefs();
+  var done = defs.filter(function(x){ return isDone(x.c, x.d.k); }).length;
+  $('progN').textContent = done; $('progT').textContent = defs.length;
+  $('progBar').style.width = (defs.length ? Math.round(done/defs.length*100) : 0) + '%';
+
+  // board
+  var acs = activeClients();
+  var board = $('board');
+  if (!acs.length){
+    board.innerHTML = '<div class="empty" style="grid-column:1/-1"><b>No active clients yet</b>Add them in Settings → Active clients.</div>';
+  } else {
+    board.innerHTML = acs.map(function(c){
+      var s = summaryFor(c.id, today());
+      var st = s ? s.status : 'none';
+      var lbl = s ? STATUS_FULL[st] || st : 'Not reviewed';
+      var mt = '';
+      if (s){
+        var bits = [];
+        if (s.lpRate !== '' && s.lpRate != null) bits.push('LP ' + s.lpRate + '%');
+        if (s.bookingRate !== '' && s.bookingRate != null) bits.push('Book ' + s.bookingRate + '%');
+        if (s.visitorsSinceTest !== '' && s.visitorsSinceTest != null) bits.push(s.visitorsSinceTest + '/30 vis');
+        mt = bits.map(function(b){ return '<span>'+esc(b)+'</span>'; }).join('');
+      }
+      var reviewed = isDone(c.id,'sum');
+      return '<button class="sc" data-s="'+st+'" data-client="'+esc(c.id)+'">' +
+        '<span class="nm">'+esc(c.name)+ (reviewed?' <span style="color:var(--ok);font-size:12px">✓</span>':'') +'</span>' +
+        '<span class="st">'+esc(lbl)+'</span>' +
+        (mt ? '<span class="mt">'+mt+'</span>' : '<span class="mt"><span>tap to review</span></span>') +
+        '</button>';
+    }).join('');
+  }
+  $('boardSub').textContent = acs.filter(function(c){ return !!summaryFor(c.id,today()); }).length + ' of ' + acs.length + ' reviewed today';
+
+  // friday block
+  $('blkFriday').hidden = !isFriday();
+  if (isFriday()) $('fridayTasks').innerHTML = FRIDAY.map(function(d){ return taskRow(null,d); }).join('');
+
+  // morning
+  $('morningGlobal').innerHTML = GLOBAL_MORNING.map(function(d){ return taskRow(null,d); }).join('');
+  $('clientList').innerHTML = acs.length ? acs.map(function(c){
+    var n = PER_CLIENT.filter(function(d){ return isDone(c.id,d.k); }).length;
+    var full = n === PER_CLIENT.length;
+    var s = summaryFor(c.id, today());
+    var chip = s ? '<span class="st-chip '+s.status+'">'+esc(STATUS_LABEL[s.status]||s.status)+'</span>'
+                 : '<span class="st-chip none">Not reviewed</span>';
+    var open = S._open === c.id;
+    return '<div class="cl'+(open?' open':'')+'" data-cl="'+esc(c.id)+'">' +
+      '<button class="cl-hd" data-toggle-cl="'+esc(c.id)+'">' +
+        '<span class="ring'+(full?' full':'')+'">'+n+'/'+PER_CLIENT.length+'</span>' +
+        '<span class="nm">'+esc(c.name)+'</span>' + chip +
+        '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>' +
+      '</button>' +
+      (open ? '<div class="cl-bd">' + PER_CLIENT.map(function(d){ return taskRow(c.id,d); }).join('') + '</div>' : '') +
+      '</div>';
+  }).join('') : '<div class="empty"><b>Nothing to review</b>Add your active clients in Settings.</div>';
+
+  var mDefs = GLOBAL_MORNING.length + acs.length*PER_CLIENT.length;
+  var mDone = GLOBAL_MORNING.filter(function(d){return isDone(null,d.k);}).length +
+              acs.reduce(function(a,c){ return a + PER_CLIENT.filter(function(d){return isDone(c.id,d.k);}).length; },0);
+  $('cntMorning').textContent = mDone + '/' + mDefs;
+
+  // discussion
+  var flagged = acs.map(function(c){ return { c:c, s:summaryFor(c.id, today()) }; })
+                   .filter(function(x){ return x.s && (x.s.status==='action' || x.s.status==='tech'); });
+  $('discussList').innerHTML = flagged.length
+    ? '<div class="note'+(flagged.some(function(x){return x.s.status==='tech';})?' bad':' warn')+'" style="margin-bottom:4px"><b>Bring these '+flagged.length+':</b></div>' +
+      flagged.map(function(x){
+        return '<div style="padding:9px 2px;border-bottom:1px solid var(--line)">' +
+          '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">' +
+            '<b style="font-size:14px">'+esc(x.c.name)+'</b>' +
+            '<span class="st-chip '+x.s.status+'">'+esc(STATUS_LABEL[x.s.status])+'</span></div>' +
+          '<div style="font-size:13px;color:var(--fg-2);margin-top:4px"><b>Recommendation:</b> '+esc(x.s.recommendation||'—')+'</div>' +
+          (x.s.why ? '<div style="font-size:12.5px;color:var(--fg-3);margin-top:2px">'+esc(x.s.why)+'</div>' : '') +
+        '</div>';
+      }).join('')
+    : '<div class="note ok">Nothing flagged yet today. If every reviewed client is healthy or still collecting data, there is nothing to bring.</div>';
+  $('discussTasks').innerHTML = DISCUSS.map(function(d){ return taskRow(null,d); }).join('');
+  $('cntDiscuss').textContent = DISCUSS.filter(function(d){return isDone(null,d.k);}).length + '/' + DISCUSS.length;
+
+  // afternoon
+  $('afternoonTasks').innerHTML = AFTERNOON.map(function(d){ return taskRow(null,d); }).join('');
+  $('cntAfternoon').textContent = AFTERNOON.filter(function(d){return isDone(null,d.k);}).length + '/' + AFTERNOON.length;
+}
+
+/* ==================================================================
+   6. RENDER — SUMMARY BUILDER
+   ================================================================== */
+
+var draft = { status:'' };
+
+function fillClientSelects(){
+  var opts = activeClients().map(function(c){
+    return '<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>';
+  }).join('');
+  ['sClient','tClient','fClient'].forEach(function(id){
+    var el = $(id), cur = el.value;
+    el.innerHTML = '<option value="">— select —</option>' + opts;
+    if (cur) el.value = cur;
+  });
+}
+
+function readSummaryForm(){
+  var cid = $('sClient').value;
+  var c = S.clients.filter(function(x){ return x.id===cid; })[0];
+  return {
+    id: $('sDate').value + '|' + cid,
+    date: $('sDate').value, clientId: cid, clientName: c ? c.name : '',
+    status: draft.status,
+    ad: $('sAd').value.trim(),
+    landingPage: $('sLp').value.trim(),
+    lpRate: $('sLpRate').value,
+    automation: $('sAuto').value.trim(),
+    salesPage: $('sSales').value.trim(),
+    bookingRate: $('sBook').value,
+    visitorsSinceTest: $('sVis').value,
+    behaviour: $('sBeh').value.trim(),
+    recommendation: $('sRec').value.trim(),
+    why: $('sWhy').value.trim(),
+    todaysAction: $('sAct').value.trim()
+  };
+}
+
+function summaryText(s){
+  var L = [];
+  L.push('CLIENT: ' + (s.clientName || '[Name]'));
+  L.push('STATUS: ' + (STATUS_FULL[s.status] || '[select a status]'));
+  L.push('');
+  if (s.ad) L.push('Ad: ' + s.ad);
+  var lp = [];
+  if (s.lpRate !== '' && s.lpRate != null) lp.push(s.lpRate + '%');
+  if (s.landingPage) lp.push(s.landingPage);
+  if (lp.length) L.push('Landing Page: ' + lp.join(' — '));
+  if (s.automation) L.push('Automation: ' + s.automation);
+  var sp = [];
+  if (s.bookingRate !== '' && s.bookingRate != null) sp.push(s.bookingRate + '% booking rate');
+  if (s.visitorsSinceTest !== '' && s.visitorsSinceTest != null) sp.push(s.visitorsSinceTest + ' visitors since last test');
+  if (s.salesPage) sp.unshift(s.salesPage);
+  if (sp.length) L.push('Sales Page: ' + sp.join('; '));
+  if (s.behaviour) L.push('Behaviour: ' + s.behaviour);
+  L.push('RECOMMENDATION: ' + (s.recommendation || 'No change'));
+  if (s.why) L.push('WHY: ' + s.why);
+  if (s.todaysAction) L.push("TODAY'S ACTION: " + s.todaysAction);
+  return L.join('\n');
+}
+
+function renderPreview(){
+  var s = readSummaryForm();
+  $('sumPreview').textContent = s.clientId ? summaryText(s) : 'Pick a client to start.';
+
+  // benchmark flags
+  var lp = num($('sLpRate').value), bk = num($('sBook').value), vs = num($('sVis').value);
+  var f;
+  f = $('lpFlag');
+  if (lp == null) { f.className='flag mut'; f.textContent='Enter the rate to check it against the 15% benchmark.'; }
+  else if (lp >= LP_TARGET) { f.className='flag ok'; f.textContent='✓ '+lp+'% — at or above the 15% target. Hold unless something else is broken.'; }
+  else { f.className='flag warn'; f.textContent='▲ '+lp+'% — below the 15% target. One specific change only, no redesign.'; }
+
+  f = $('bookFlag');
+  if (bk == null) { f.className='flag mut'; f.textContent='Enter the booking rate to check it against 5–10%.'; }
+  else if (bk >= BOOK_MIN) { f.className='flag ok'; f.textContent='✓ '+bk+'% — inside the 5–10% target band.'; }
+  else { f.className='flag warn'; f.textContent='▲ '+bk+'% — below 5%. Next one-variable test once you pass 30 visitors.'; }
+
+  f = $('visFlag');
+  if (vs == null) { f.className='flag mut'; f.textContent='Under 30 = hold unless there is a technical issue.'; }
+  else if (vs >= VIS_GATE) { f.className='flag ok'; f.textContent='✓ '+vs+' visitors — decision point reached. Evaluate the result now.'; }
+  else { f.className='flag bad'; f.textContent='✗ only '+vs+' of 30 — HOLD. Not enough data for a sales-page test.'; }
+
+  f = $('recFlag');
+  var rec = $('sRec').value.trim();
+  if (!rec) { f.className='flag mut'; f.textContent=''; }
+  else if (/\band\b|,|;|\+/i.test(rec) && rec.length > 40) {
+    f.className='flag warn'; f.textContent='▲ This reads like more than one change. One meaningful variable at a time.';
+  } else { f.className='flag ok'; f.textContent='✓ Single change.'; }
+
+  f = $('statusHelp');
+  if (draft.status === 'hold') { f.className='flag ok'; f.textContent='Hold — state the key reason briefly and continue collecting data.'; }
+  else if (draft.status === 'action') { f.className='flag warn'; f.textContent='Action — one specific change, why, and what will be measured.'; }
+  else if (draft.status === 'tech') { f.className='flag bad'; f.textContent='Technical — prioritize the fix. Flag it now, do not wait for a visitor threshold.'; }
+  else { f.className='flag mut'; f.textContent='Pick a status — it drives the discussion list and the status board.'; }
+}
+
+function loadSummaryInto(s){
+  $('sClient').value = s.clientId; $('sDate').value = String(s.date).slice(0,10);
+  draft.status = s.status || '';
+  Array.prototype.forEach.call($('sStatus').children, function(b){
+    b.setAttribute('aria-pressed', b.dataset.v === draft.status ? 'true':'false');
+  });
+  $('sAd').value = s.ad||''; $('sLp').value = s.landingPage||''; $('sLpRate').value = s.lpRate||'';
+  $('sAuto').value = s.automation||''; $('sSales').value = s.salesPage||''; $('sBook').value = s.bookingRate||'';
+  $('sVis').value = s.visitorsSinceTest||''; $('sBeh').value = s.behaviour||'';
+  $('sRec').value = s.recommendation||''; $('sWhy').value = s.why||''; $('sAct').value = s.todaysAction||'';
+  renderPreview();
+}
+
+function clearSummaryForm(keepClient){
+  if (!keepClient) $('sClient').value = '';
+  $('sDate').value = today();
+  draft.status = '';
+  Array.prototype.forEach.call($('sStatus').children, function(b){ b.setAttribute('aria-pressed','false'); });
+  ['sAd','sLp','sLpRate','sAuto','sSales','sBook','sVis','sBeh','sRec','sWhy','sAct'].forEach(function(id){ $(id).value=''; });
+  renderPreview();
+}
+
+function renderSumList(){
+  var mode = $('sumFilter').value, cutoff = null;
+  if (mode==='today') cutoff = today();
+  else if (mode==='7' || mode==='30'){
+    var d = new Date(); d.setDate(d.getDate() - parseInt(mode,10)); cutoff = isoDay(d);
+  }
+  var rows = S.summaries.filter(function(s){
+    var day = String(s.date).slice(0,10);
+    if (mode==='today') return day === cutoff;
+    if (cutoff) return day >= cutoff;
+    return true;
+  }).sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
+
+  $('sumList').innerHTML = rows.length ? rows.map(function(s){
+    return '<div style="padding:10px 2px;border-bottom:1px solid var(--line);display:flex;gap:9px;align-items:flex-start">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:13.5px">'+esc(s.clientName)+'</b>' +
+        '<span class="st-chip '+esc(s.status)+'">'+esc(STATUS_LABEL[s.status]||s.status)+'</span>' +
+        '<span style="font-size:11.5px;color:var(--fg-3)">'+esc(String(s.date).slice(0,10))+'</span></div>' +
+        '<div style="font-size:12.5px;color:var(--fg-2);margin-top:3px">'+esc(s.recommendation||'No change')+'</div>' +
+      '</div>' +
+      '<button class="btn sm" data-loadsum="'+esc(s.id)+'">Open</button></div>';
+  }).join('') : '<div class="empty"><b>No summaries yet</b>They appear here once you save one.</div>';
+}
+
+/* ==================================================================
+   7. RENDER — TEST LOG
+   ================================================================== */
+
+function testStatus(t){
+  if (['improved','declined','flat'].indexOf(t.status) >= 0) return t.status;
+  var v = num(t.visitors), gate = /(\d+)/.exec(String(t.decisionPoint||''));
+  var g = gate ? parseInt(gate[1],10) : VIS_GATE;
+  if (v != null && v >= g) return 'due';
+  return 'running';
+}
+
+function renderTests(){
+  var f = $('tFilter').value;
+  var rows = S.tests.slice().filter(function(t){
+    var st = testStatus(t);
+    if (f==='open') return st==='running' || st==='due';
+    if (f==='due') return st==='due';
+    if (f==='closed') return ['improved','declined','flat'].indexOf(st) >= 0;
+    return true;
+  }).sort(function(a,b){ return String(b.startDate).localeCompare(String(a.startDate)); });
+
+  var due = S.tests.filter(function(t){ return testStatus(t)==='due'; }).length;
+  var b = $('tstBadge');
+  b.textContent = due; b.className = 'badge' + (due ? ' hot' : '');
+
+  var lbl = { running:['run','Collecting'], due:['due','Decide now'], improved:['won','Improved'], declined:['lost','Declined'], flat:['flat','No change'] };
+
+  $('testTable').innerHTML = rows.length ? '<div class="tblwrap"><table><thead><tr>' +
+    '<th>Client</th><th>Stage</th><th>Test / change</th><th>Start</th><th>Decision point</th><th>Data</th><th>Status</th><th>Result / next step</th><th></th>' +
+    '</tr></thead><tbody>' + rows.map(function(t){
+      var st = testStatus(t), L = lbl[st] || ['flat', st];
+      var g = /(\d+)/.exec(String(t.decisionPoint||'')); g = g ? parseInt(g[1],10) : VIS_GATE;
+      return '<tr>' +
+        '<td><b>'+esc(t.clientName)+'</b></td>' +
+        '<td>'+esc(t.funnelStage)+'</td>' +
+        '<td style="max-width:250px">'+esc(t.testChange)+ (t.why?'<div style="color:var(--fg-3);font-size:11.8px;margin-top:3px">'+esc(t.why)+'</div>':'') +'</td>' +
+        '<td class="num">'+esc(String(t.startDate).slice(0,10))+'</td>' +
+        '<td>'+esc(t.decisionPoint||'')+'</td>' +
+        '<td class="num">'+esc(t.visitors===''||t.visitors==null?'—':t.visitors+' / '+g)+'</td>' +
+        '<td><span class="tag '+L[0]+'">'+L[1]+'</span></td>' +
+        '<td style="max-width:250px">'+esc(t.result||'—')+ (t.nextStep?'<div style="color:var(--fg-3);font-size:11.8px;margin-top:3px">Next: '+esc(t.nextStep)+'</div>':'') +'</td>' +
+        '<td><button class="btn sm" data-edittest="'+esc(t.id)+'">Edit</button></td>' +
+      '</tr>';
+    }).join('') + '</tbody></table></div>'
+    : '<div class="empty"><b>No tests recorded</b>Every approved change should land here so anyone can answer what changed, when, why and what is next.</div>';
+
+  var vf = $('tVisFlag'), v = num($('tVis').value);
+  var gm = /(\d+)/.exec($('tDecision').value || ''); var gg = gm ? parseInt(gm[1],10) : VIS_GATE;
+  if (v == null) { vf.className='flag mut'; vf.textContent=''; }
+  else if (v >= gg) { vf.className='flag ok'; vf.textContent='Decision point reached — evaluate.'; }
+  else { vf.className='flag mut'; vf.textContent=(gg-v)+' more to reach the decision point.'; }
+}
+
+function openTest(t){
+  $('testForm').hidden = false;
+  $('testFormTitle').textContent = t ? 'Edit test' : 'New test';
+  $('delTest').hidden = !t;
+  $('tId').value = t ? t.id : '';
+  $('tClient').value = t ? t.clientId : '';
+  $('tStage').value = t ? t.funnelStage : 'Sales Page';
+  $('tStart').value = t ? String(t.startDate).slice(0,10) : today();
+  $('tChange').value = t ? t.testChange : '';
+  $('tWhy').value = t ? t.why : '';
+  $('tDecision').value = t ? t.decisionPoint : '30 new sales-page visitors';
+  $('tVis').value = t ? t.visitors : 0;
+  $('tStatus').value = t ? (['improved','declined','flat'].indexOf(t.status)>=0 ? t.status : 'running') : 'running';
+  $('tResult').value = t ? t.result : '';
+  $('tNext').value = t ? t.nextStep : '';
+  renderTests();
+  $('testForm').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ==================================================================
+   8. RENDER — FRIDAY REPORT
+   ================================================================== */
+
+function weekRange(fridayIso){
+  var f = parseDay(fridayIso);
+  var mon = new Date(f); mon.setDate(f.getDate() - 4);
+  return { from: isoDay(mon), to: fridayIso };
+}
+
+function lastFriday(){
+  var d = new Date(), diff = (d.getDay() - 5 + 7) % 7;
+  d.setDate(d.getDate() - diff);
+  return isoDay(d);
+}
+
+function buildReport(){
+  var cid = $('fClient').value, wk = $('fWeek').value;
+  if (!cid || !wk) { toast('Pick a client and a week first'); return; }
+  var c = S.clients.filter(function(x){ return x.id===cid; })[0] || {name:''};
+  var r = weekRange(wk);
+  var week = S.summaries.filter(function(s){
+    var d = String(s.date).slice(0,10);
+    return String(s.clientId)===String(cid) && d >= r.from && d <= r.to;
+  }).sort(function(a,b){ return String(a.date).localeCompare(String(b.date)); });
+
+  var tests = S.tests.filter(function(t){
+    var d = String(t.startDate).slice(0,10);
+    return String(t.clientId)===String(cid) && d <= r.to;
+  });
+
+  if (!week.length){
+    $('repSource').className = 'note warn';
+    $('repSource').innerHTML = '<b>No daily summaries logged for '+esc(c.name)+' between '+r.from+' and '+r.to+'.</b> You can still write the report by hand below.';
+  } else {
+    $('repSource').className = 'note ok';
+    $('repSource').innerHTML = '<b>Built from '+week.length+' daily '+(week.length===1?'summary':'summaries')+'</b> ('+r.from+' → '+r.to+') and '+tests.length+' logged '+(tests.length===1?'test':'tests')+'. Edit anything below before sending.';
+  }
+
+  var last = week[week.length-1] || {};
+  var lpVals = week.map(function(s){ return num(s.lpRate); }).filter(function(v){ return v!=null; });
+  var bkVals = week.map(function(s){ return num(s.bookingRate); }).filter(function(v){ return v!=null; });
+  var avg = function(a){ return a.length ? Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10 : null; };
+
+  $('rAds').value = last.ad || '';
+  $('rLp').value = lpVals.length
+    ? avg(lpVals) + '% average conversion rate' + (avg(lpVals) >= LP_TARGET ? ' — at or above our 15% target.' : ' — below our 15% target.')
+    : (last.landingPage || '');
+  $('rAuto').value = last.automation || '';
+  $('rSales').value = bkVals.length
+    ? avg(bkVals) + '% booking rate' + (last.visitorsSinceTest ? ', ' + last.visitorsSinceTest + ' new visitors since the last change.' : '.')
+    : (last.salesPage || '');
+
+  var learned = week.filter(function(s){ return s.behaviour; })
+    .map(function(s){ return '• ' + String(s.date).slice(5) + ' — ' + s.behaviour; });
+  var techs = week.filter(function(s){ return s.status==='tech'; })
+    .map(function(s){ return '• Technical: ' + (s.automation || s.recommendation || 'issue identified and addressed'); });
+  $('rLearn').value = learned.concat(techs).join('\n');
+
+  var started = tests.filter(function(t){ return String(t.startDate).slice(0,10) >= r.from; });
+  $('rTests').value = started.map(function(t){
+    return '• ' + t.funnelStage + ': ' + t.testChange + (t.why ? ' — ' + t.why : '');
+  }).join('\n');
+
+  $('rResults').value = tests.map(function(t){
+    var st = testStatus(t);
+    var word = st==='improved' ? 'Improved' : st==='declined' ? 'Declined' : st==='flat' ? 'No clear change' :
+               st==='due' ? 'Decision point reached — evaluating' : 'Still collecting data';
+    return '• ' + t.testChange + ' — ' + word + (t.result ? ': ' + t.result : '') +
+           (st==='running' ? ' (' + (t.visitors||0) + ' of the visitors needed).' : '');
+  }).join('\n');
+
+  var open = tests.filter(function(t){ return ['improved','declined','flat'].indexOf(testStatus(t)) < 0; });
+  $('rNext').value = (open.length ? open.map(function(t){ return '• ' + (t.nextStep || 'Continue collecting data on: ' + t.testChange); }).join('\n') : '')
+    || (last.todaysAction ? '• ' + last.todaysAction : '');
+
+  var existing = S.reports.filter(function(x){ return x.id === wk + '|' + cid; })[0];
+  if (existing && existing.insight) $('rInsight').value = existing.insight;
+
+  renderRepPreview();
+}
+
+function reportObj(){
+  var cid = $('fClient').value;
+  var c = S.clients.filter(function(x){ return x.id===cid; })[0] || {name:''};
+  return {
+    id: $('fWeek').value + '|' + cid,
+    weekEnding: $('fWeek').value, clientId: cid, clientName: c.name,
+    snapAds:$('rAds').value, snapLp:$('rLp').value, snapAuto:$('rAuto').value, snapSales:$('rSales').value,
+    learned:$('rLearn').value, testsMade:$('rTests').value, results:$('rResults').value,
+    nextAction:$('rNext').value, insight:$('rInsight').value
+  };
+}
+
+function reportText(r){
+  var L = [];
+  L.push('CLIENT PERFORMANCE REPORT — ' + (r.clientName || '[Client]'));
+  L.push('Week ending ' + (r.weekEnding || ''));
+  L.push('');
+  L.push('PERFORMANCE SNAPSHOT');
+  if (r.snapAds)   L.push('  Ads: ' + r.snapAds);
+  if (r.snapLp)    L.push('  Landing page: ' + r.snapLp);
+  if (r.snapAuto)  L.push('  Nurture / automation: ' + r.snapAuto);
+  if (r.snapSales) L.push('  Sales / booking page: ' + r.snapSales);
+  var sec = function(title, body){ if (body && body.trim()){ L.push(''); L.push(title); L.push(body.split('\n').map(function(x){return '  '+x;}).join('\n')); } };
+  sec('WHAT WE LEARNED THIS WEEK', r.learned);
+  sec('TESTS & IMPROVEMENTS MADE', r.testsMade);
+  sec('RESULTS SO FAR', r.results);
+  sec('NEXT ACTION', r.nextAction);
+  sec('INSIGHT WORTH KEEPING', r.insight);
+  return L.join('\n');
+}
+
+function renderRepPreview(){
+  var r = reportObj();
+  if (!r.clientId){ $('repPreview').innerHTML = '<div class="empty"><b>No client selected</b>Pick a client and week above, then build.</div>'; return; }
+  var sec = function(t, b){ return (b && b.trim()) ? '<section><h4>'+esc(t)+'</h4><p>'+esc(b)+'</p></section>' : ''; };
+  var snap = function(t,b){ return (b && b.trim()) ? '<div><span>'+esc(t)+'</span><p>'+esc(b)+'</p></div>' : ''; };
+  var snaps = snap('Ads',r.snapAds)+snap('Landing page',r.snapLp)+snap('Nurture / automation',r.snapAuto)+snap('Sales / booking',r.snapSales);
+  $('repPreview').innerHTML =
+    '<h2>'+esc(r.clientName)+' — Client Performance Report</h2>' +
+    '<div class="meta">Week ending ' + esc(r.weekEnding) + ' · Grnded Agency</div>' +
+    (snaps ? '<section><h4>Performance snapshot</h4><div class="snap">'+snaps+'</div></section>' : '') +
+    sec('What we learned this week', r.learned) +
+    sec('Tests & improvements made', r.testsMade) +
+    sec('Results so far', r.results) +
+    sec('Next action', r.nextAction) +
+    sec('Insight worth keeping', r.insight);
+}
+
+/* ==================================================================
+   9. RENDER — SETTINGS
+   ================================================================== */
+
+function renderClients(){
+  $('clientAdmin').innerHTML = S.clients.length ? S.clients.map(function(c){
+    var on = c.active !== false && c.active !== 'FALSE' && c.active !== 'false';
+    return '<div style="display:flex;gap:9px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line)">' +
+      '<input type="text" value="'+esc(c.name)+'" data-cname="'+esc(c.id)+'" style="flex:1;min-width:120px">' +
+      '<button class="btn sm" data-ctoggle="'+esc(c.id)+'">'+(on?'Active':'Archived')+'</button>' +
+      '<button class="btn sm danger" data-cdel="'+esc(c.id)+'">Remove</button></div>';
+  }).join('') : '<div class="empty"><b>No clients</b>Add the funnels you own.</div>';
+}
+
+function renderQueue(){
+  var q = S.queue.length;
+  $('queueInfo').textContent = q ? (q + ' change' + (q>1?'s':'') + ' waiting to sync to the sheet.') : 'Everything is synced.';
+}
+
+function renderAll(){
+  fillClientSelects(); renderToday(); renderSumList(); renderTests();
+  renderClients(); renderQueue(); renderPreview(); renderRepPreview();
+}
+
+/* ==================================================================
+   10. UI PLUMBING
+   ================================================================== */
+
+var toastT;
+function toast(m){
+  var el = $('toast'); el.textContent = m; el.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(function(){ el.classList.remove('on'); }, 2400);
+}
+function copy(text){
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){ toast('Copied'); }, fallback);
+  } else fallback();
+  function fallback(){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Copied'); } catch(e){ toast('Copy failed — select and copy manually'); }
+    document.body.removeChild(ta);
+  }
+}
+
+function goto(p){
+  document.querySelectorAll('.tab').forEach(function(t){ t.setAttribute('aria-selected', t.dataset.p===p ? 'true':'false'); });
+  document.querySelectorAll('.panel').forEach(function(s){ s.classList.toggle('on', s.id === 'p-'+p); });
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click', function(){ goto(t.dataset.p); });
+});
+
+function applyTheme(){
+  if (S.theme) document.documentElement.setAttribute('data-theme', S.theme);
+  else document.documentElement.removeAttribute('data-theme');
+  var dark = (S.theme === 'dark') ||
+             (!S.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  var i = $('themeIcon'); if (i) i.textContent = dark ? '☀' : '☾';
+}
+$('themeBtn').addEventListener('click', function(){
+  var cur = S.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  S.theme = cur === 'dark' ? 'light' : 'dark';
+  applyTheme(); save();
+});
+
+/* ---- delegated clicks ---- */
+document.addEventListener('click', function(e){
+  var el;
+
+  if ((el = e.target.closest('[data-goto]'))){ e.stopPropagation(); goto(el.dataset.goto); return; }
+
+  if ((el = e.target.closest('.tk'))){
+    toggle(el.dataset.c || null, el.dataset.k); return;
+  }
+
+  if ((el = e.target.closest('[data-toggle-cl]'))){
+    S._open = (S._open === el.dataset.toggleCl) ? null : el.dataset.toggleCl;
+    renderToday(); return;
+  }
+
+  if ((el = e.target.closest('[data-client]'))){
+    var cid = el.dataset.client;
+    goto('review'); $('sClient').value = cid; $('sDate').value = today();
+    var ex = summaryFor(cid, today());
+    if (ex) loadSummaryInto(ex); else { clearSummaryForm(true); }
+    return;
+  }
+
+  if ((el = e.target.closest('[data-loadsum]'))){
+    var s = S.summaries.filter(function(x){ return String(x.id)===el.dataset.loadsum; })[0];
+    if (s) { loadSummaryInto(s); toast('Loaded'); }
+    return;
+  }
+
+  if ((el = e.target.closest('[data-edittest]'))){
+    var t = S.tests.filter(function(x){ return String(x.id)===el.dataset.edittest; })[0];
+    if (t) openTest(t);
+    return;
+  }
+
+  if ((el = e.target.closest('[data-ctoggle]'))){
+    var c = S.clients.filter(function(x){ return x.id===el.dataset.ctoggle; })[0];
+    if (c){ c.active = !(c.active !== false && c.active !== 'FALSE' && c.active !== 'false');
+      save(); push('saveClient', {id:c.id, name:c.name, active:c.active}); renderAll(); }
+    return;
+  }
+
+  if ((el = e.target.closest('[data-cdel]'))){
+    var id = el.dataset.cdel;
+    S.clients = S.clients.filter(function(x){ return x.id !== id; });
+    save(); push('deleteClient', {id:id}); renderAll(); toast('Client removed');
+    return;
+  }
+});
+
+document.addEventListener('change', function(e){
+  var el = e.target.closest('[data-cname]');
+  if (el){
+    var c = S.clients.filter(function(x){ return x.id===el.dataset.cname; })[0];
+    if (c){ c.name = el.value.trim(); save(); push('saveClient',{id:c.id,name:c.name,active:c.active!==false}); fillClientSelects(); renderToday(); }
+  }
+});
+
+/* ---- summary builder ---- */
+$('sStatus').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if (!b) return;
+  draft.status = (draft.status === b.dataset.v) ? '' : b.dataset.v;
+  Array.prototype.forEach.call(this.children, function(x){
+    x.setAttribute('aria-pressed', x.dataset.v === draft.status ? 'true':'false');
+  });
+  renderPreview();
+});
+['sClient','sDate','sAd','sLp','sLpRate','sAuto','sSales','sBook','sVis','sBeh','sRec','sWhy','sAct']
+  .forEach(function(id){ $(id).addEventListener('input', renderPreview); });
+$('sClient').addEventListener('change', function(){
+  var ex = summaryFor($('sClient').value, $('sDate').value);
+  if (ex) loadSummaryInto(ex); else renderPreview();
+});
+$('sumFilter').addEventListener('change', renderSumList);
+$('copySum').addEventListener('click', function(){ copy(summaryText(readSummaryForm())); });
+$('clearSum').addEventListener('click', function(){ clearSummaryForm(false); });
+
+function persistSummary(){
+  var s = readSummaryForm();
+  if (!s.clientId){ toast('Pick a client first'); return null; }
+  if (!s.status){ toast('Pick a status first'); return null; }
+  S.summaries = S.summaries.filter(function(x){ return String(x.id) !== String(s.id); });
+  S.summaries.push(s);
+  if (s.date === today()) S.tasks[tkey(s.clientId,'sum')] = true;
+  save();
+  push('saveSummary', s);
+  if (s.date === today()) push('toggleTask', { date:today(), clientId:s.clientId, taskKey:'sum', done:true });
+  renderAll();
+  return s;
+}
+$('saveSum').addEventListener('click', function(){ if (persistSummary()) toast('Saved to the sheet'); });
+$('saveAndTest').addEventListener('click', function(){
+  var s = persistSummary(); if (!s) return;
+  goto('tests');
+  openTest(null);
+  $('tClient').value = s.clientId;
+  $('tChange').value = s.recommendation || '';
+  $('tWhy').value = s.why || '';
+  $('tStart').value = s.date;
+  $('tVis').value = 0;
+  toast('Summary saved — finish the test record');
+});
+
+/* ---- test log ---- */
+$('tFilter').addEventListener('change', renderTests);
+$('newTest').addEventListener('click', function(){ openTest(null); });
+$('cancelTest').addEventListener('click', function(){ $('testForm').hidden = true; });
+['tVis','tDecision'].forEach(function(id){ $(id).addEventListener('input', renderTests); });
+$('saveTest').addEventListener('click', function(){
+  var cid = $('tClient').value;
+  if (!cid){ toast('Pick a client'); return; }
+  if (!$('tChange').value.trim()){ toast('Describe the change'); return; }
+  var c = S.clients.filter(function(x){ return x.id===cid; })[0] || {name:''};
+  var t = {
+    id: $('tId').value || uid('t'),
+    clientId: cid, clientName: c.name,
+    funnelStage: $('tStage').value, testChange: $('tChange').value.trim(), why: $('tWhy').value.trim(),
+    startDate: $('tStart').value || today(), decisionPoint: $('tDecision').value.trim() || '30 new sales-page visitors',
+    visitors: $('tVis').value === '' ? 0 : parseInt($('tVis').value,10),
+    status: $('tStatus').value, result: $('tResult').value.trim(), nextStep: $('tNext').value.trim()
+  };
+  S.tests = S.tests.filter(function(x){ return String(x.id) !== String(t.id); });
+  S.tests.push(t); save(); push('saveTest', t);
+  $('testForm').hidden = true; renderTests(); toast('Test recorded');
+});
+$('delTest').addEventListener('click', function(){
+  var id = $('tId').value; if (!id) return;
+  S.tests = S.tests.filter(function(x){ return String(x.id) !== String(id); });
+  save(); push('deleteTest', {id:id}); $('testForm').hidden = true; renderTests(); toast('Test deleted');
+});
+
+/* ---- friday ---- */
+$('buildRep').addEventListener('click', buildReport);
+['rAds','rLp','rAuto','rSales','rLearn','rTests','rResults','rNext','rInsight','fClient','fWeek']
+  .forEach(function(id){ $(id).addEventListener('input', renderRepPreview); });
+$('fClient').addEventListener('change', function(){
+  var ex = S.reports.filter(function(x){ return x.id === $('fWeek').value + '|' + $('fClient').value; })[0];
+  if (ex){
+    $('rAds').value=ex.snapAds||''; $('rLp').value=ex.snapLp||''; $('rAuto').value=ex.snapAuto||'';
+    $('rSales').value=ex.snapSales||''; $('rLearn').value=ex.learned||''; $('rTests').value=ex.testsMade||'';
+    $('rResults').value=ex.results||''; $('rNext').value=ex.nextAction||''; $('rInsight').value=ex.insight||'';
+  }
+  renderRepPreview();
+});
+$('saveRep').addEventListener('click', function(){
+  var r = reportObj();
+  if (!r.clientId){ toast('Pick a client'); return; }
+  S.reports = S.reports.filter(function(x){ return String(x.id) !== String(r.id); });
+  S.reports.push(r); save(); push('saveReport', r); toast('Report saved to the sheet');
+});
+$('copyRep').addEventListener('click', function(){ copy(reportText(reportObj())); });
+$('printRep').addEventListener('click', function(){ window.print(); });
+
+/* ---- settings ---- */
+$('addClient').addEventListener('click', function(){
+  var name = prompt('Client name');
+  if (!name || !name.trim()) return;
+  var c = { id: uid('c'), name: name.trim(), active: true };
+  S.clients.push(c); save(); push('saveClient', c); renderAll(); toast('Client added');
+});
+$('connectBtn').addEventListener('click', function(){
+  var u = $('apiUrl').value.trim();
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(u)){
+    $('connMsg').innerHTML = '<div class="note bad">That does not look like an Apps Script <code>/exec</code> URL. It should look like <code>https://script.google.com/macros/s/AKfy…/exec</code>.</div>';
+    return;
+  }
+  S.apiUrl = u; save();
+  $('connMsg').innerHTML = '<div class="note">Connecting…</div>';
+  pull().then(function(){
+    $('connMsg').innerHTML = '<div class="note ok"><b>Connected.</b> '+activeClients().length+' active clients, '+S.summaries.length+' summaries, '+S.tests.length+' tests loaded from the sheet.</div>';
+  }).catch(function(e){
+    $('connMsg').innerHTML = '<div class="note bad"><b>Could not reach the web app.</b> '+esc(e.message)+
+      '<br>Check: deployed as a <b>Web app</b>, “Execute as: Me”, “Who has access: <b>Anyone</b>”, and you copied the <code>/exec</code> URL.</div>';
+  });
+});
+$('openSheet').addEventListener('click', function(){
+  window.open(S.sheetUrl || 'https://docs.google.com/spreadsheets/u/0/', '_blank', 'noopener');
+});
+$('exportJson').addEventListener('click', function(){
+  var blob = new Blob([JSON.stringify({clients:S.clients,summaries:S.summaries,tests:S.tests,reports:S.reports,tasks:S.tasks}, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'grnded-cpos-backup-' + today() + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+});
+$('forcePull').addEventListener('click', function(){ pull().then(function(){ toast('Pulled from the sheet'); }).catch(function(){ toast('Could not reach the sheet'); }); });
+$('wipeLocal').addEventListener('click', function(){
+  if (!confirm('Clear the local cache? Anything already synced to the Google Sheet is safe.')) return;
+  var url = S.apiUrl;
+  localStorage.removeItem(LS);
+  S.clients=[]; S.summaries=[]; S.tests=[]; S.reports=[]; S.tasks={}; S.queue=[]; S.apiUrl=url;
+  save(); renderAll(); toast('Local cache cleared');
+});
+$('syncBtn').addEventListener('click', function(){
+  if (!S.apiUrl){ goto('settings'); toast('Connect the Google Sheet first'); return; }
+  drain(); pull().then(function(){ toast('Synced'); }).catch(function(){ toast('Sync failed'); });
+});
+
+/* ==================================================================
+   11. BOOT
+   ================================================================== */
+
+load();
+applyTheme();
+S.sheetUrl = 'https://docs.google.com/spreadsheets/d/1knmoRtsHNdvyebDi9O7_o93tpQZYJPa1BpWBx43hnOw/edit';
+$('apiUrl').value = S.apiUrl || '';
+$('sDate').value = today();
+$('tStart').value = today();
+$('fWeek').value = lastFriday();
+
+if (!S.clients.length){
+  S.clients = [
+    { id:'c_eric',   name:'Eric',             active:true },
+    { id:'c_demo_a', name:'Northline Dental', active:true },
+    { id:'c_demo_b', name:'Vertex Roofing',   active:true }
+  ];
+}
+
+renderAll();
+
+if (S.apiUrl){
+  pull().catch(function(){ /* cache already rendered */ });
+} else {
+  setConn('off','Not connected');
+}
+
+window.addEventListener('online', function(){ drain(); });
+})();
+</script>
+</body>
+</html>
