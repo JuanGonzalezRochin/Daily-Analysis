@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Grnded · Client Performance OS</title>
+<title>Daily Management Process</title>
 <meta name="description" content="Daily operating dashboard for client performance & fulfillment.">
 <style>
 /* ============================== TOKENS ============================== */
@@ -149,10 +149,11 @@ main{padding-block:22px 64px}
 .hero h1{font-size:20px; letter-spacing:-.02em}
 .hero .date{color:var(--fg-3); font-size:13px; margin-top:2px}
 .hero .standard{
-  margin-top:14px;padding:12px 14px;border-radius:var(--radius-sm);
-  background:var(--bg-inset); border:1px solid var(--line);
-  font-size:13.5px; color:var(--fg-2);
+  margin-top:12px;font-size:12.5px; color:var(--fg-3); line-height:1.5;
 }
+.hero .standard b{color:var(--fg-2)}
+.hero{padding:16px}
+.hero h1{font-size:19px}
 .hero .standard b{color:var(--fg)}
 .prog{margin-left:auto; text-align:right; min-width:150px}
 .prog .n{font-size:26px;font-weight:720;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
@@ -161,16 +162,16 @@ main{padding-block:22px 64px}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 50%,#12d3a0));border-radius:999px;transition:width .35s ease}
 
 /* ============================== STATUS BOARD ============================== */
-.board{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
+.board{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(178px,1fr))}
 .sc{
-  border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px;
+  border:1px solid var(--line); border-radius:var(--radius-sm); padding:10px 11px;
   background:var(--bg-2); text-align:left; width:100%; display:block;
   transition:border-color .15s, transform .15s;
 }
 .sc:hover{border-color:var(--line-2); transform:translateY(-1px)}
-.sc .nm{font-weight:650; font-size:14px; display:flex; align-items:center; gap:7px}
-.sc .st{margin-top:7px; font-size:11px; font-weight:750; letter-spacing:.05em; text-transform:uppercase}
-.sc .mt{margin-top:7px; font-size:12px; color:var(--fg-3); display:flex; gap:10px; flex-wrap:wrap; font-variant-numeric:tabular-nums}
+.sc .nm{font-weight:650; font-size:13.5px; display:flex; align-items:center; gap:6px}
+.sc .st{margin-top:5px; font-size:10.5px; font-weight:750; letter-spacing:.05em; text-transform:uppercase}
+.sc .mt{margin-top:5px; font-size:11.5px; color:var(--fg-3); display:flex; gap:10px; flex-wrap:wrap; font-variant-numeric:tabular-nums}
 .sc[data-s="hold"]{border-left:3px solid var(--ok)}   .sc[data-s="hold"] .st{color:var(--ok)}
 .sc[data-s="action"]{border-left:3px solid var(--warn)} .sc[data-s="action"] .st{color:var(--warn)}
 .sc[data-s="tech"]{border-left:3px solid var(--bad)}   .sc[data-s="tech"] .st{color:var(--bad)}
@@ -200,6 +201,10 @@ main{padding-block:22px 64px}
 .tk .txt{min-width:0;flex:1}
 .tk .t{display:block;font-size:14px;font-weight:600}
 .tk .d{display:block;font-size:12.7px;color:var(--fg-3);margin-top:3px;max-width:78ch}
+body.lean .tk .d{display:none}
+body.lean .tk{padding:9px 14px}
+body.lean .tk .t{font-size:13.7px}
+body.lean .tk [data-goto]{display:none}
 .tk.done .t{color:var(--fg-3); text-decoration:line-through; text-decoration-color:var(--line-2)}
 .tk.done .d{opacity:.6}
 
@@ -299,6 +304,15 @@ td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .tag.flat{color:var(--fg-3);background:var(--bg-3);border-color:var(--line-2)}
 
 /* ============================== MISC ============================== */
+.sumrow{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border-top:1px solid var(--line);cursor:pointer;transition:background .12s;
+}
+.sumrow:first-child{border-top:0}
+.sumrow:hover{background:var(--bg-inset)}
+.sumrow .nm{font-weight:600;font-size:14px;flex:1;min-width:0}
+.sumrow .go{font-size:12px;color:var(--accent);font-weight:620;white-space:nowrap}
+.sumrow.done .nm{color:var(--fg-3)}
 .empty{padding:34px 18px;text-align:center;color:var(--fg-3);font-size:13.5px}
 .empty b{display:block;color:var(--fg-2);font-size:14.5px;margin-bottom:4px}
 .note{
@@ -355,8 +369,8 @@ code{font-family:var(--mono);font-size:12px;background:var(--bg-3);padding:1px 5
     <div class="brand">
       <div class="mark">G</div>
       <div>
-        <b>Client Performance OS</b><br>
-        <span>Grnded · Daily operating process</span>
+        <b>Daily Management Process</b><br>
+        <span>Grnded</span>
       </div>
     </div>
     <div class="top-actions">
@@ -394,39 +408,55 @@ code{font-family:var(--mono);font-size:12px;background:var(--bg-3);padding:1px 5
       </div>
     </div>
     <div class="standard">
-      <b>The standard:</b> “Anything we need to address today?” — you should be able to answer that confidently
-      because every active client has already been reviewed from ad click through booked appointment.
+      <b>The standard:</b> “Anything we need to address today?” — answer that confidently because every
+      active client has been reviewed from ad click through booked appointment.
     </div>
   </div>
 
   <div class="card">
     <div class="card-hd">
-      <h3>Client status board</h3>
-      <span class="sub" id="boardSub">today's call on each active funnel</span>
+      <h3>Client status</h3>
+      <span class="sub" id="boardSub"></span>
+      <button class="btn sm" id="detailBtn" style="margin-left:auto">Show detail</button>
     </div>
     <div class="card-bd tight"><div class="board" id="board"></div></div>
   </div>
 
   <div class="block" id="blkFriday" hidden>
-    <div class="block-hd">
-      <h2>Friday</h2><span class="hdnote">Client-facing performance report</span>
-    </div>
+    <div class="block-hd"><h2>Friday</h2><span class="hdnote">Client-facing performance report</span></div>
     <div class="card" id="fridayTasks"></div>
   </div>
 
   <div class="block">
     <div class="block-hd">
-      <h2>Morning · Existing client performance &amp; optimization</h2>
-      <span class="hdnote">Know the health of every active funnel and identify today’s required actions.</span>
+      <h2>Morning · Review pass</h2>
+      <span class="hdnote">One pass per stage, across every active client.</span>
       <span class="cnt" id="cntMorning"></span>
     </div>
-    <div class="card" id="morningGlobal"></div>
-    <div class="card" id="clientList" style="margin-top:10px"></div>
+    <div class="card" id="morningTasks"></div>
   </div>
 
   <div class="block">
     <div class="block-hd">
-      <h2>After morning review · Quick decision discussion</h2>
+      <h2>Daily funnel &amp; tracking QA</h2>
+      <span class="hdnote">Confirm the core system is functioning, where applicable.</span>
+      <span class="cnt" id="cntQa"></span>
+    </div>
+    <div class="card" id="qaTasks"></div>
+  </div>
+
+  <div class="block">
+    <div class="block-hd">
+      <h2>Write the summaries</h2>
+      <span class="hdnote">Status, one recommendation, why, today’s action.</span>
+      <span class="cnt" id="cntSum"></span>
+    </div>
+    <div class="card" id="sumRows"></div>
+  </div>
+
+  <div class="block">
+    <div class="block-hd">
+      <h2>After morning review · Decision discussion</h2>
       <span class="hdnote">Bring only items requiring discussion or approval.</span>
       <span class="cnt" id="cntDiscuss"></span>
     </div>
@@ -788,26 +818,35 @@ var GLOBAL_MORNING = [
   { k:'m_report', t:'Pull the AI report for every active client',
     d:'It is one input only. Your recommendation combines the report, platform data, behaviour data, technical checks and your own judgment.' },
   { k:'m_tests', t:'Check the Test Log for decision points',
-    d:'Any test that has hit its threshold gets decided today, not next week.' }
+    d:'Any test that has hit its threshold gets decided today, not next week.', cta:'tests' }
 ];
 
-var PER_CLIENT = [
-  { k:'ads', t:'Ads',
-    d:'Spend, CPM, CTR, CPC, frequency, link clicks and trend changes. Meaningful deterioration, improvement or anomaly? Does the creative/audience need attention or keep collecting?' },
-  { k:'lp', t:'Landing page',
-    d:'Visitors, conversions and conversion rate against the 15% target. Check Mouseflow heat maps, scroll depth, clicks and drop-off. If it needs a test, ONE specific change — no redesign.' },
-  { k:'auto', t:'Email / SMS automation',
-    d:'New leads entering the correct automation. Correct order and timing, no errors or broken links. Delivery, open, click and response. How many click through to the sales / booking page.' },
-  { k:'sales', t:'Sales / booking page',
-    d:'Visitors, booked appointments and booking rate against 5–10%. Count NEW visitors since the last test: 30+ means evaluate, under 30 means hold unless there is a technical issue.' },
-  { k:'beh', t:'Behaviour',
-    d:'The single most relevant heat-map / Mouseflow finding. Where exactly are people dropping?' },
-  { k:'qa', t:'Funnel & tracking QA',
-    d:'Ads point to the right page · forms submit and leads record · redirects and thank-you/sales pages work · contacts enter the right automation · emails/SMS send and links work · calendar books · pixels, events and UTMs fire · cross-platform discrepancies investigated.' },
-  { k:'diag', t:'Funnel diagnosis',
-    d:'One connected system, not separate platforms. Where is the largest leak right now and what is the most logical next action?' },
-  { k:'sum', t:'Set the status and write the summary',
-    d:'NO ACTION / HOLD, ACTION REQUIRED or TECHNICAL ISSUE — plus one recommendation, the why, and today’s action.', cta:'review' }
+/* One pass per funnel stage, run across every active client — not a list per client. */
+var REVIEW_PASS = [
+  { k:'ads', t:'Ads — all clients',
+    d:'Spend, CPM, CTR, CPC, frequency, link clicks and trend changes. Flag meaningful deterioration, improvement or anomalies. Does the creative/audience need attention, or keep collecting?' },
+  { k:'lp', t:'Landing pages — all clients',
+    d:'Visitors, conversions and conversion rate against the 15% target. Mouseflow heat maps, scroll depth, clicks and drop-off. If one needs a test: ONE specific change, no redesign.' },
+  { k:'auto', t:'Email / SMS automation — all clients',
+    d:'Leads entering the correct automation. Correct order and timing, no errors or broken links. Delivery, open, click and response. How many click through to the sales / booking page.' },
+  { k:'sales', t:'Sales / booking pages — all clients',
+    d:'Visitors, booked appointments and booking rate against 5–10%. Count NEW visitors since each last test: 30+ means evaluate, under 30 means hold unless there is a technical issue.' },
+  { k:'beh', t:'Behaviour — all clients',
+    d:'The single most relevant heat-map / Mouseflow finding per client. Where exactly are people dropping?' },
+  { k:'diag', t:'Funnel diagnosis — all clients',
+    d:'Each funnel as one connected system, not separate platforms. Where is the largest leak right now and what is the most logical next action?' }
+];
+
+/* §9 — Daily Funnel & Tracking QA. Confirm the core system is functioning, where applicable. */
+var QA_CHECKS = [
+  { k:'qa_ads',      t:'Ads point to the correct page' },
+  { k:'qa_forms',    t:'Forms submit correctly and leads are recorded' },
+  { k:'qa_redirect', t:'Redirects and thank-you / sales pages work' },
+  { k:'qa_enter',    t:'New contacts enter the correct automation' },
+  { k:'qa_send',     t:'Emails / SMS send and links work' },
+  { k:'qa_cal',      t:'Calendar / booking process works' },
+  { k:'qa_track',    t:'Pixels, events, UTMs and key tracking are functioning' },
+  { k:'qa_disc',     t:'Obvious discrepancies between platforms investigated, not ignored' }
 ];
 
 var DISCUSS = [
@@ -848,7 +887,7 @@ var LS = 'grnded_cpos_v1';
 
 var S = {
   apiUrl:'', clients:[], tasks:{}, summaries:[], tests:[], reports:[],
-  queue:[], conn:'off', sheetUrl:'', theme:''
+  queue:[], conn:'off', sheetUrl:'', theme:'', lean:true
 };
 
 function today(){ return isoDay(new Date()); }
@@ -870,14 +909,14 @@ function activeClients(){ return S.clients.filter(function(c){ return c.active !
 function save(){
   try { localStorage.setItem(LS, JSON.stringify({
     apiUrl:S.apiUrl, clients:S.clients, tasks:S.tasks, summaries:S.summaries,
-    tests:S.tests, reports:S.reports, queue:S.queue, theme:S.theme
+    tests:S.tests, reports:S.reports, queue:S.queue, theme:S.theme, lean:S.lean
   })); } catch(e){}
 }
 function load(){
   try {
     var raw = localStorage.getItem(LS); if (!raw) return;
     var d = JSON.parse(raw);
-    ['apiUrl','clients','tasks','summaries','tests','reports','queue','theme'].forEach(function(k){
+    ['apiUrl','clients','tasks','summaries','tests','reports','queue','theme','lean'].forEach(function(k){
       if (d[k] !== undefined) S[k] = d[k];
     });
   } catch(e){}
@@ -996,7 +1035,8 @@ function taskRow(clientId, def){
   var cta = def.cta ? '<button class="btn sm no-print" data-goto="'+def.cta+'" style="margin-top:7px">Open '+(def.cta==='review'?'summary builder':def.cta==='tests'?'test log':'report builder')+' →</button>' : '';
   return '<div class="tk'+(done?' done':'')+'" data-c="'+esc(clientId||'')+'" data-k="'+esc(def.k)+'">' +
     '<span class="box"><svg viewBox="0 0 12 12"><path d="M1.8 6.3 L4.4 8.9 L10.2 3.1"/></svg></span>' +
-    '<span class="txt"><span class="t">'+esc(def.t)+'</span><span class="d">'+esc(def.d)+'</span>'+cta+'</span></div>';
+    '<span class="txt"><span class="t">'+esc(def.t)+'</span>' +
+    (def.d ? '<span class="d">'+esc(def.d)+'</span>' : '') + cta + '</span></div>';
 }
 
 function isFriday(){ return new Date().getDay() === 5; }
@@ -1004,9 +1044,8 @@ function isFriday(){ return new Date().getDay() === 5; }
 function allTaskDefs(){
   var list = [];
   GLOBAL_MORNING.forEach(function(d){ list.push({c:null,d:d}); });
-  activeClients().forEach(function(c){
-    PER_CLIENT.forEach(function(d){ list.push({c:c.id,d:d}); });
-  });
+  REVIEW_PASS.forEach(function(d){ list.push({c:null,d:d}); });
+  QA_CHECKS.forEach(function(d){ list.push({c:null,d:d}); });
   DISCUSS.forEach(function(d){ list.push({c:null,d:d}); });
   AFTERNOON.forEach(function(d){ list.push({c:null,d:d}); });
   if (isFriday()) FRIDAY.forEach(function(d){ list.push({c:null,d:d}); });
@@ -1031,69 +1070,61 @@ function renderToday(){
   $('heroGreet').textContent = (h<12?'Good morning':h<18?'Good afternoon':'Good evening') + ', Juan';
   $('heroDate').textContent = d.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
 
-  // progress
-  var defs = allTaskDefs();
-  var done = defs.filter(function(x){ return isDone(x.c, x.d.k); }).length;
-  $('progN').textContent = done; $('progT').textContent = defs.length;
-  $('progBar').style.width = (defs.length ? Math.round(done/defs.length*100) : 0) + '%';
-
-  // board
   var acs = activeClients();
+  var written = acs.filter(function(c){ return !!summaryFor(c.id, today()); });
+
+  // ---- progress: shared tasks + one summary per active client ----
+  var defs = allTaskDefs();
+  var done = defs.filter(function(x){ return isDone(x.c, x.d.k); }).length + written.length;
+  var total = defs.length + acs.length;
+  $('progN').textContent = done; $('progT').textContent = total;
+  $('progBar').style.width = (total ? Math.round(done/total*100) : 0) + '%';
+
+  // ---- status board ----
   var board = $('board');
-  if (!acs.length){
-    board.innerHTML = '<div class="empty" style="grid-column:1/-1"><b>No active clients yet</b>Add them in Settings → Active clients.</div>';
-  } else {
-    board.innerHTML = acs.map(function(c){
-      var s = summaryFor(c.id, today());
-      var st = s ? s.status : 'none';
-      var lbl = s ? STATUS_FULL[st] || st : 'Not reviewed';
-      var mt = '';
-      if (s){
-        var bits = [];
-        if (s.lpRate !== '' && s.lpRate != null) bits.push('LP ' + s.lpRate + '%');
-        if (s.bookingRate !== '' && s.bookingRate != null) bits.push('Book ' + s.bookingRate + '%');
-        if (s.visitorsSinceTest !== '' && s.visitorsSinceTest != null) bits.push(s.visitorsSinceTest + '/30 vis');
-        mt = bits.map(function(b){ return '<span>'+esc(b)+'</span>'; }).join('');
-      }
-      var reviewed = isDone(c.id,'sum');
-      return '<button class="sc" data-s="'+st+'" data-client="'+esc(c.id)+'">' +
-        '<span class="nm">'+esc(c.name)+ (reviewed?' <span style="color:var(--ok);font-size:12px">✓</span>':'') +'</span>' +
-        '<span class="st">'+esc(lbl)+'</span>' +
-        (mt ? '<span class="mt">'+mt+'</span>' : '<span class="mt"><span>tap to review</span></span>') +
-        '</button>';
-    }).join('');
-  }
-  $('boardSub').textContent = acs.filter(function(c){ return !!summaryFor(c.id,today()); }).length + ' of ' + acs.length + ' reviewed today';
+  board.innerHTML = acs.length ? acs.map(function(c){
+    var sm = summaryFor(c.id, today());
+    var st = sm ? sm.status : 'none';
+    var lbl = sm ? STATUS_FULL[st] || st : 'Not reviewed';
+    var bits = [];
+    if (sm){
+      if (sm.lpRate !== '' && sm.lpRate != null) bits.push('LP ' + sm.lpRate + '%');
+      if (sm.bookingRate !== '' && sm.bookingRate != null) bits.push('Book ' + sm.bookingRate + '%');
+    }
+    return '<button class="sc" data-s="'+st+'" data-client="'+esc(c.id)+'">' +
+      '<span class="nm">'+esc(c.name)+'</span>' +
+      '<span class="st">'+esc(lbl)+'</span>' +
+      (bits.length ? '<span class="mt">'+bits.map(function(x){return '<span>'+esc(x)+'</span>';}).join('')+'</span>' : '') +
+      '</button>';
+  }).join('') : '<div class="empty" style="grid-column:1/-1"><b>No active clients yet</b>Add them in Settings.</div>';
+  $('boardSub').textContent = written.length + ' of ' + acs.length + ' reviewed today';
 
-  // friday block
+  // ---- friday ----
   $('blkFriday').hidden = !isFriday();
-  if (isFriday()) $('fridayTasks').innerHTML = FRIDAY.map(function(d){ return taskRow(null,d); }).join('');
+  if (isFriday()) $('fridayTasks').innerHTML = FRIDAY.map(function(x){ return taskRow(null,x); }).join('');
 
-  // morning
-  $('morningGlobal').innerHTML = GLOBAL_MORNING.map(function(d){ return taskRow(null,d); }).join('');
-  $('clientList').innerHTML = acs.length ? acs.map(function(c){
-    var n = PER_CLIENT.filter(function(d){ return isDone(c.id,d.k); }).length;
-    var full = n === PER_CLIENT.length;
-    var s = summaryFor(c.id, today());
-    var chip = s ? '<span class="st-chip '+s.status+'">'+esc(STATUS_LABEL[s.status]||s.status)+'</span>'
-                 : '<span class="st-chip none">Not reviewed</span>';
-    var open = S._open === c.id;
-    return '<div class="cl'+(open?' open':'')+'" data-cl="'+esc(c.id)+'">' +
-      '<button class="cl-hd" data-toggle-cl="'+esc(c.id)+'">' +
-        '<span class="ring'+(full?' full':'')+'">'+n+'/'+PER_CLIENT.length+'</span>' +
-        '<span class="nm">'+esc(c.name)+'</span>' + chip +
-        '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>' +
-      '</button>' +
-      (open ? '<div class="cl-bd">' + PER_CLIENT.map(function(d){ return taskRow(c.id,d); }).join('') + '</div>' : '') +
-      '</div>';
-  }).join('') : '<div class="empty"><b>Nothing to review</b>Add your active clients in Settings.</div>';
+  // ---- morning review pass (shared across all clients) ----
+  var morning = GLOBAL_MORNING.concat(REVIEW_PASS);
+  $('morningTasks').innerHTML = morning.map(function(x){ return taskRow(null,x); }).join('');
+  $('cntMorning').textContent = morning.filter(function(x){return isDone(null,x.k);}).length + '/' + morning.length;
 
-  var mDefs = GLOBAL_MORNING.length + acs.length*PER_CLIENT.length;
-  var mDone = GLOBAL_MORNING.filter(function(d){return isDone(null,d.k);}).length +
-              acs.reduce(function(a,c){ return a + PER_CLIENT.filter(function(d){return isDone(c.id,d.k);}).length; },0);
-  $('cntMorning').textContent = mDone + '/' + mDefs;
+  // ---- §9 QA ----
+  $('qaTasks').innerHTML = QA_CHECKS.map(function(x){ return taskRow(null,x); }).join('');
+  $('cntQa').textContent = QA_CHECKS.filter(function(x){return isDone(null,x.k);}).length + '/' + QA_CHECKS.length;
 
-  // discussion
+  // ---- one summary per client ----
+  $('sumRows').innerHTML = acs.length ? acs.map(function(c){
+    var sm = summaryFor(c.id, today());
+    var chip = sm ? '<span class="st-chip '+sm.status+'">'+esc(STATUS_LABEL[sm.status]||sm.status)+'</span>'
+                  : '<span class="st-chip none">Not written</span>';
+    return '<div class="sumrow'+(sm?' done':'')+'" data-client="'+esc(c.id)+'">' +
+      '<span class="box">'+(sm?'<svg viewBox="0 0 12 12"><path d="M1.8 6.3 L4.4 8.9 L10.2 3.1"/></svg>':'')+'</span>' +
+      '<span class="nm">'+esc(c.name)+'</span>' + chip +
+      '<span class="go">'+(sm?'Edit':'Write')+' →</span></div>';
+  }).join('') : '<div class="empty"><b>No active clients</b>Add the funnels you own in Settings.</div>';
+  $('cntSum').textContent = written.length + '/' + acs.length;
+
+  // ---- discussion ----
   var flagged = acs.map(function(c){ return { c:c, s:summaryFor(c.id, today()) }; })
                    .filter(function(x){ return x.s && (x.s.status==='action' || x.s.status==='tech'); });
   $('discussList').innerHTML = flagged.length
@@ -1108,12 +1139,12 @@ function renderToday(){
         '</div>';
       }).join('')
     : '<div class="note ok">Nothing flagged yet today. If every reviewed client is healthy or still collecting data, there is nothing to bring.</div>';
-  $('discussTasks').innerHTML = DISCUSS.map(function(d){ return taskRow(null,d); }).join('');
-  $('cntDiscuss').textContent = DISCUSS.filter(function(d){return isDone(null,d.k);}).length + '/' + DISCUSS.length;
+  $('discussTasks').innerHTML = DISCUSS.map(function(x){ return taskRow(null,x); }).join('');
+  $('cntDiscuss').textContent = DISCUSS.filter(function(x){return isDone(null,x.k);}).length + '/' + DISCUSS.length;
 
-  // afternoon
-  $('afternoonTasks').innerHTML = AFTERNOON.map(function(d){ return taskRow(null,d); }).join('');
-  $('cntAfternoon').textContent = AFTERNOON.filter(function(d){return isDone(null,d.k);}).length + '/' + AFTERNOON.length;
+  // ---- afternoon ----
+  $('afternoonTasks').innerHTML = AFTERNOON.map(function(x){ return taskRow(null,x); }).join('');
+  $('cntAfternoon').textContent = AFTERNOON.filter(function(x){return isDone(null,x.k);}).length + '/' + AFTERNOON.length;
 }
 
 /* ==================================================================
@@ -1526,6 +1557,14 @@ function applyTheme(){
              (!S.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
   var i = $('themeIcon'); if (i) i.textContent = dark ? '☀' : '☾';
 }
+function applyLean(){
+  document.body.classList.toggle('lean', S.lean !== false);
+  var b = $('detailBtn'); if (b) b.textContent = (S.lean !== false) ? 'Show detail' : 'Hide detail';
+}
+$('detailBtn').addEventListener('click', function(){
+  S.lean = (S.lean === false); applyLean(); save();
+});
+
 $('themeBtn').addEventListener('click', function(){
   var cur = S.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   S.theme = cur === 'dark' ? 'light' : 'dark';
@@ -1540,11 +1579,6 @@ document.addEventListener('click', function(e){
 
   if ((el = e.target.closest('.tk'))){
     toggle(el.dataset.c || null, el.dataset.k); return;
-  }
-
-  if ((el = e.target.closest('[data-toggle-cl]'))){
-    S._open = (S._open === el.dataset.toggleCl) ? null : el.dataset.toggleCl;
-    renderToday(); return;
   }
 
   if ((el = e.target.closest('[data-client]'))){
@@ -1745,6 +1779,7 @@ $('syncBtn').addEventListener('click', function(){
 
 load();
 applyTheme();
+applyLean();
 S.sheetUrl = 'https://docs.google.com/spreadsheets/d/1knmoRtsHNdvyebDi9O7_o93tpQZYJPa1BpWBx43hnOw/edit';
 $('apiUrl').value = S.apiUrl || '';
 $('sDate').value = today();
