@@ -354,8 +354,35 @@ code{font-family:var(--mono);font-size:12px;background:var(--bg-3);padding:1px 5
 .rep .snap span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-3);font-weight:700}
 .rep .snap p{font-size:13.5px;margin-top:3px}
 
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.chip{
+  padding:4px 10px;border-radius:999px;border:1px dashed var(--line-2);
+  background:none;font-size:11.5px;font-weight:600;color:var(--fg-3);transition:all .15s;
+}
+.chip:hover{border-style:solid;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.print-only{display:none}
+.dp{margin-top:4px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:var(--fg-3)}
+.dp b{font-variant-numeric:tabular-nums;color:var(--fg-2)}
+td .sub2{color:var(--fg-3);font-size:11.8px;margin-top:3px;display:block}
+th.act,td.act{width:1%}
+
 @media print{
   header.top,nav.tabs,.no-print{display:none !important}
+  .print-only{display:block}
+  .card,.card-hd{border:0 !important;box-shadow:none !important;padding-left:0;padding-right:0}
+  .card-bd,.card-bd.tight{padding-left:0;padding-right:0}
+  .tblwrap{border:0;overflow:visible}
+  #p-tests table{min-width:0;font-size:10.5px}
+  #p-tests th{background:#12233f !important;color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;border:1px solid #12233f}
+  #p-tests td{border:1px solid #9aa3b0;color:#000}
+  #p-tests .tag{border:1px solid #666;color:#000 !important;background:none !important}
+  #p-tests .card-hd{display:none}
+  #p-tests td .sub2{color:#4a4a4a}
+  #p-tests .dp{color:#4a4a4a}
+  #p-tests .dp b{color:#000}
+  #printHd h2{font-size:17px;margin-bottom:2px}
+  #printHd .lede{font-size:11.5px;color:#222;margin-bottom:3px;max-width:78ch}
+  #printHd p{font-size:11px;color:#555;margin-bottom:10px}
   body{background:#fff;color:#000}
   .rep{border:0;padding:0}
   main{padding:0}
@@ -613,24 +640,29 @@ code{font-family:var(--mono);font-size:12px;background:var(--bg-3);padding:1px 5
 
 <!-- ============================ TEST LOG ============================ -->
 <section class="panel" id="p-tests">
+  <div id="printHd" class="print-only"></div>
   <div class="card">
     <div class="card-hd">
-      <h3>Active test record</h3>
+      <h3>Test management record</h3>
       <span class="sub">what changed · when · why · what's next</span>
-      <div style="margin-left:auto" class="btns">
+      <div style="margin-left:auto" class="btns no-print">
         <select id="tFilter" style="width:auto;padding:6px 9px;font-size:12px">
           <option value="open">Open tests</option>
+          <option value="today">Started today</option>
           <option value="due">At decision point</option>
           <option value="closed">Closed</option>
           <option value="all">All</option>
         </select>
+        <button class="btn sm pri" id="copyTest">Copy report</button>
+        <button class="btn sm" id="csvTest">CSV</button>
+        <button class="btn sm" id="printTest">Print</button>
         <button class="btn sm pri" id="newTest">+ New test</button>
       </div>
     </div>
     <div class="card-bd tight" id="testTable" style="padding-top:14px"></div>
   </div>
 
-  <div class="card" id="testForm" hidden>
+  <div class="card no-print" id="testForm" hidden>
     <div class="card-hd"><h3 id="testFormTitle">New test</h3></div>
     <div class="card-bd">
       <input type="hidden" id="tId">
@@ -659,13 +691,15 @@ code{font-family:var(--mono);font-size:12px;background:var(--bg-3);padding:1px 5
         <label for="tWhy">Why we changed it</label>
         <textarea id="tWhy" rows="2" placeholder="Booking rate 2.9% at 34 visitors; heat maps show drop before the calendar."></textarea>
       </div>
-      <div class="row c3">
-        <div class="field">
-          <label for="tDecision">Decision point</label>
-          <input type="text" id="tDecision" placeholder="30 new sales-page visitors">
-        </div>
-        <div class="field">
-          <label for="tVis">Visitors / data since start</label>
+      <div class="field">
+        <label for="tDecision">Decision point <span class="hint">— start it with a number to track progress; anything else is a judgement call</span></label>
+        <input type="text" id="tDecision" placeholder="30 new sales-page visitors">
+        <div class="chips" id="dpChips"></div>
+        <div class="flag mut" id="tGateNote"></div>
+      </div>
+      <div class="row c2">
+        <div class="field" id="tVisWrap">
+          <label for="tVis" id="tVisLabel">Data so far</label>
           <input type="number" id="tVis" min="0" step="1" placeholder="0">
           <div class="flag mut" id="tVisFlag"></div>
         </div>
@@ -879,6 +913,32 @@ var FRIDAY = [
 var STATUS_LABEL = { hold:'No action / hold', action:'Action required', tech:'Technical issue' };
 var STATUS_FULL  = { hold:'NO ACTION / HOLD', action:'ACTION REQUIRED', tech:'TECHNICAL ISSUE' };
 var LP_TARGET = 15, BOOK_MIN = 5, BOOK_MAX = 10, VIS_GATE = 30;
+
+/* Decision points that actually mean something for each stage. An ad test does not
+   wait on 30 sales-page visitors. The first entry is the default for that stage.
+   A decision point that STARTS with a number is tracked as progress; one that does
+   not is a judgement call and shows no data counter at all. */
+var STAGE_DP = {
+  'Ad':                     ['7 days running', '1000 impressions', '100 link clicks', '$100 spend', 'Judgement call — creative read'],
+  'Landing Page':           ['100 new visitors', '50 new visitors', 'Judgement call — heat-map read'],
+  'Email / SMS Automation': ['50 contacts through the sequence', '1 full send cycle', 'Judgement call — message read'],
+  'Sales Page':             ['30 new sales-page visitors', '50 new sales-page visitors', 'Judgement call'],
+  'Booking Process':        ['10 booking attempts', '30 new sales-page visitors', 'Judgement call'],
+  'Tracking / Technical':   ['Verified working with a live test submission', 'Judgement call']
+};
+var ALL_DP = Object.keys(STAGE_DP).reduce(function(a,k){ return a.concat(STAGE_DP[k]); }, []);
+
+/* A leading number means "track progress toward this". Anything else is judgement. */
+function gateOf(text){
+  var m = /^\s*\$?\s*([\d,]+)/.exec(String(text || ''));
+  if (!m) return null;
+  var n = parseInt(m[1].replace(/,/g,''), 10);
+  return isNaN(n) ? null : n;
+}
+function unitOf(text){
+  var m = /^\s*\$?\s*[\d,]+\s*(.*)$/.exec(String(text || ''));
+  return (m && m[1]) ? m[1].trim() : 'so far';
+}
 var LS = 'grnded_cpos_v1';
 
 /* ==================================================================
@@ -1297,52 +1357,166 @@ function renderSumList(){
 
 function testStatus(t){
   if (['improved','declined','flat'].indexOf(t.status) >= 0) return t.status;
-  var v = num(t.visitors), gate = /(\d+)/.exec(String(t.decisionPoint||''));
-  var g = gate ? parseInt(gate[1],10) : VIS_GATE;
+  var g = gateOf(t.decisionPoint);
+  if (g == null) return 'running';           // judgement call — never auto-flags
+  var v = num(t.visitors);
   if (v != null && v >= g) return 'due';
   return 'running';
 }
 
-function renderTests(){
-  var f = $('tFilter').value;
-  var rows = S.tests.slice().filter(function(t){
+function filterTests(f){
+  return S.tests.slice().filter(function(t){
     var st = testStatus(t);
-    if (f==='open') return st==='running' || st==='due';
-    if (f==='due') return st==='due';
+    if (f==='open')   return st==='running' || st==='due';
+    if (f==='today')  return String(t.startDate).slice(0,10) === today();
+    if (f==='due')    return st==='due';
     if (f==='closed') return ['improved','declined','flat'].indexOf(st) >= 0;
     return true;
-  }).sort(function(a,b){ return String(b.startDate).localeCompare(String(a.startDate)); });
+  }).sort(function(a,b){
+    return String(a.clientName).localeCompare(String(b.clientName)) ||
+           String(b.startDate).localeCompare(String(a.startDate));
+  });
+}
+
+function renderTests(){
+  var f = $('tFilter').value;
+  var rows = filterTests(f);
 
   var due = S.tests.filter(function(t){ return testStatus(t)==='due'; }).length;
-  var b = $('tstBadge');
-  b.textContent = due; b.className = 'badge' + (due ? ' hot' : '');
+  var bd = $('tstBadge');
+  bd.textContent = due; bd.className = 'badge' + (due ? ' hot' : '');
 
-  var lbl = { running:['run','Collecting'], due:['due','Decide now'], improved:['won','Improved'], declined:['lost','Declined'], flat:['flat','No change'] };
+  var lbl = { running:['run','Collecting'], due:['due','Decide now'],
+              improved:['won','Improved'], declined:['lost','Declined'], flat:['flat','No change'] };
 
+  var label = { open:'Open tests', today:'Started today', due:'At decision point', closed:'Closed tests', all:'All tests' }[f];
+  $('printHd').innerHTML = '<h2>Test Management Record — Grnded</h2>' +
+    '<div class="lede">Maintain a clear record for every active test so anyone can answer what changed, ' +
+    'when it changed, why it changed and what happened next.</div>' +
+    '<p>' + label + ' · ' + rows.length + ' ' + (rows.length===1?'entry':'entries') +
+    ' · generated ' + new Date().toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'}) + '</p>';
+
+  // §10 columns, in the doc's order and wording.
   $('testTable').innerHTML = rows.length ? '<div class="tblwrap"><table><thead><tr>' +
-    '<th>Client</th><th>Stage</th><th>Test / change</th><th>Start</th><th>Decision point</th><th>Data</th><th>Status</th><th>Result / next step</th><th></th>' +
+    '<th>Client</th><th>Funnel Stage</th><th>Test / Change</th><th>Start Date</th>' +
+    '<th>Decision Point</th><th>Result / Next Step</th><th class="act no-print"></th>' +
     '</tr></thead><tbody>' + rows.map(function(t){
       var st = testStatus(t), L = lbl[st] || ['flat', st];
-      var g = /(\d+)/.exec(String(t.decisionPoint||'')); g = g ? parseInt(g[1],10) : VIS_GATE;
+      var g = gateOf(t.decisionPoint);
+      var v = (t.visitors==='' || t.visitors==null) ? null : parseInt(t.visitors,10);
+      var closed = ['improved','declined','flat'].indexOf(st) >= 0;
+
+      var progress = (closed || g == null) ? ''
+        : (v == null ? '<b>no data logged</b>'
+                     : '<b>' + v + ' / ' + g + '</b>' + (v >= g ? ' ✓ reached' : ' · ' + (g - v) + ' to go'));
+
       return '<tr>' +
         '<td><b>'+esc(t.clientName)+'</b></td>' +
         '<td>'+esc(t.funnelStage)+'</td>' +
-        '<td style="max-width:250px">'+esc(t.testChange)+ (t.why?'<div style="color:var(--fg-3);font-size:11.8px;margin-top:3px">'+esc(t.why)+'</div>':'') +'</td>' +
+        '<td style="max-width:260px">'+esc(t.testChange) +
+          (t.why ? '<span class="sub2">Why: '+esc(t.why)+'</span>' : '') + '</td>' +
         '<td class="num">'+esc(String(t.startDate).slice(0,10))+'</td>' +
-        '<td>'+esc(t.decisionPoint||'')+'</td>' +
-        '<td class="num">'+esc(t.visitors===''||t.visitors==null?'—':t.visitors+' / '+g)+'</td>' +
-        '<td><span class="tag '+L[0]+'">'+L[1]+'</span></td>' +
-        '<td style="max-width:250px">'+esc(t.result||'—')+ (t.nextStep?'<div style="color:var(--fg-3);font-size:11.8px;margin-top:3px">Next: '+esc(t.nextStep)+'</div>':'') +'</td>' +
-        '<td><button class="btn sm" data-edittest="'+esc(t.id)+'">Edit</button></td>' +
+        '<td style="max-width:190px">'+esc(t.decisionPoint||'—') +
+          '<span class="dp">'+progress+'<span class="tag '+L[0]+'">'+L[1]+'</span></span></td>' +
+        '<td style="max-width:260px">'+esc(t.result||'—') +
+          (t.nextStep ? '<span class="sub2">Next: '+esc(t.nextStep)+'</span>' : '') + '</td>' +
+        '<td class="act no-print"><button class="btn sm" data-edittest="'+esc(t.id)+'">Edit</button></td>' +
       '</tr>';
     }).join('') + '</tbody></table></div>'
-    : '<div class="empty"><b>No tests recorded</b>Every approved change should land here so anyone can answer what changed, when, why and what is next.</div>';
+    : '<div class="empty"><b>No tests recorded</b>Maintain a clear record for every active test so anyone can answer what changed, when it changed, why it changed and what happened next.</div>';
 
-  var vf = $('tVisFlag'), v = num($('tVis').value);
-  var gm = /(\d+)/.exec($('tDecision').value || ''); var gg = gm ? parseInt(gm[1],10) : VIS_GATE;
-  if (v == null) { vf.className='flag mut'; vf.textContent=''; }
-  else if (v >= gg) { vf.className='flag ok'; vf.textContent='Decision point reached — evaluate.'; }
-  else { vf.className='flag mut'; vf.textContent=(gg-v)+' more to reach the decision point.'; }
+  syncGate();
+}
+
+/* Shows or hides the data counter based on whether the decision point is numeric. */
+function syncGate(){
+  var dpText = $('tDecision').value;
+  var g = gateOf(dpText);
+  var wrap = $('tVisWrap'), note = $('tGateNote');
+
+  if (g == null){
+    wrap.hidden = true;
+    note.className = 'flag mut';
+    note.textContent = 'Judgement call — no data counter, and it will never auto-flag as “decide now”.';
+    return;
+  }
+  wrap.hidden = false;
+  $('tVisLabel').innerHTML = 'Data so far <span class="hint">— ' + esc(unitOf(dpText)) + '</span>';
+  var vf = $('tVisFlag'), vv = num($('tVis').value);
+  if (vv == null) { vf.className='flag mut'; vf.textContent='Target is ' + g + '.'; }
+  else if (vv >= g) { vf.className='flag ok'; vf.textContent='✓ ' + vv + ' / ' + g + ' — decision point reached, evaluate now.'; }
+  else { vf.className='flag mut'; vf.textContent=(g-vv)+' more to reach ' + g + '.'; }
+  note.className = 'flag ok';
+  note.textContent = 'Tracked — flags as “decide now” at ' + g + ' (' + unitOf(dpText) + ').';
+}
+
+/* Stage-appropriate presets; never clobbers something you typed yourself. */
+function stageChanged(){
+  var st = $('tStage').value, list = STAGE_DP[st] || [];
+  $('dpChips').innerHTML = list.map(function(x){
+    return '<button type="button" class="chip" data-dp="'+esc(x)+'">'+esc(x)+'</button>';
+  }).join('');
+  var cur = $('tDecision').value.trim();
+  if (!cur || ALL_DP.indexOf(cur) >= 0) $('tDecision').value = list[0] || '';
+  syncGate();
+}
+
+/* The shareable "actions taken" report: Client · Stage · Test/Change · Start ·
+   Decision Point · Next Step. Built from whatever the filter is showing. */
+function dpDisplay(t){
+  var dp = t.decisionPoint || '—';
+  var g = gateOf(dp);
+  if (g == null) return dp;
+  var v = (t.visitors==='' || t.visitors==null) ? 0 : parseInt(t.visitors,10);
+  return dp + ' (' + v + ' of ' + g + (v >= g ? ' — reached' : '') + ')';
+}
+
+function reportScope(){
+  var f = $('tFilter').value;
+  return { open:'Open tests', today:'Actions taken today', due:'Tests at their decision point',
+           closed:'Closed tests', all:'All tests' }[f] || 'Tests';
+}
+
+function testsReportText(rows){
+  var when = new Date().toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  var L = [];
+  L.push(reportScope().toUpperCase() + ' — ' + when);
+  L.push('Grnded · Daily Management Process · ' + rows.length + ' ' + (rows.length===1?'entry':'entries'));
+  L.push('');
+  rows.forEach(function(t, i){
+    L.push((i+1) + '. ' + String(t.clientName).toUpperCase() + ' — ' + t.funnelStage);
+    L.push('   Test / change: ' + (t.testChange || '—'));
+    L.push('   Started: ' + String(t.startDate).slice(0,10));
+    L.push('   Decision point: ' + dpDisplay(t));
+    L.push('   Next step: ' + (t.nextStep || '—'));
+    L.push('');
+  });
+  return L.join('\n').replace(/\n+$/, '');
+}
+
+function testsReportHtml(rows){
+  var when = new Date().toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  var th = 'padding:7px 10px;background:#12233f;color:#ffffff;font:600 11px/1.4 Arial,sans-serif;' +
+           'text-align:left;letter-spacing:.04em;text-transform:uppercase;border:1px solid #12233f';
+  var td = 'padding:8px 10px;border:1px solid #b9c0cc;font:400 12px/1.5 Arial,sans-serif;color:#111111;vertical-align:top';
+  return '<div style="font:400 13px/1.5 Arial,sans-serif;color:#111111">' +
+    '<div style="font:700 16px/1.3 Arial,sans-serif;margin-bottom:2px">' + esc(reportScope()) + ' — ' + esc(when) + '</div>' +
+    '<div style="font:400 12px/1.4 Arial,sans-serif;color:#555555;margin-bottom:10px">Grnded · Daily Management Process · ' +
+      rows.length + ' ' + (rows.length===1?'entry':'entries') + '</div>' +
+    '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%"><thead><tr>' +
+      ['Client','Stage','Test / Change','Start','Decision Point','Next Step']
+        .map(function(h){ return '<th style="'+th+'">'+h+'</th>'; }).join('') +
+    '</tr></thead><tbody>' +
+    rows.map(function(t){
+      return '<tr>' +
+        '<td style="'+td+'"><b>'+esc(t.clientName)+'</b></td>' +
+        '<td style="'+td+'">'+esc(t.funnelStage)+'</td>' +
+        '<td style="'+td+'">'+esc(t.testChange||'—')+'</td>' +
+        '<td style="'+td+';white-space:nowrap">'+esc(String(t.startDate).slice(0,10))+'</td>' +
+        '<td style="'+td+'">'+esc(dpDisplay(t))+'</td>' +
+        '<td style="'+td+'">'+esc(t.nextStep||'—')+'</td></tr>';
+    }).join('') +
+    '</tbody></table></div>';
 }
 
 function openTest(t){
@@ -1355,11 +1529,12 @@ function openTest(t){
   $('tStart').value = t ? String(t.startDate).slice(0,10) : today();
   $('tChange').value = t ? t.testChange : '';
   $('tWhy').value = t ? t.why : '';
-  $('tDecision').value = t ? t.decisionPoint : '30 new sales-page visitors';
+  $('tDecision').value = t ? t.decisionPoint : '';
   $('tVis').value = t ? t.visitors : 0;
   $('tStatus').value = t ? (['improved','declined','flat'].indexOf(t.status)>=0 ? t.status : 'running') : 'running';
   $('tResult').value = t ? t.result : '';
   $('tNext').value = t ? t.nextStep : '';
+  stageChanged();
   renderTests();
   $('testForm').scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -1527,6 +1702,20 @@ function toast(m){
   var el = $('toast'); el.textContent = m; el.classList.add('on');
   clearTimeout(toastT); toastT = setTimeout(function(){ el.classList.remove('on'); }, 2400);
 }
+function copyRich(html, text){
+  // Pastes as a real table in Gmail / Docs / Word, and as clean text in Slack.
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
+    try {
+      navigator.clipboard.write([new ClipboardItem({
+        'text/html':  new Blob([html], {type:'text/html'}),
+        'text/plain': new Blob([text], {type:'text/plain'})
+      })]).then(function(){ toast('Report copied'); }, function(){ copy(text); });
+      return;
+    } catch(e){}
+  }
+  copy(text);
+}
+
 function copy(text){
   if (navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text).then(function(){ toast('Copied'); }, fallback);
@@ -1672,8 +1861,35 @@ $('saveAndTest').addEventListener('click', function(){
 /* ---- test log ---- */
 $('tFilter').addEventListener('change', renderTests);
 $('newTest').addEventListener('click', function(){ openTest(null); });
+$('copyTest').addEventListener('click', function(){
+  var rows = filterTests($('tFilter').value);
+  if (!rows.length){ toast('Nothing in this filter to report'); return; }
+  copyRich(testsReportHtml(rows), testsReportText(rows));
+});
+$('printTest').addEventListener('click', function(){ $('testForm').hidden = true; window.print(); });
+$('csvTest').addEventListener('click', function(){
+  var rows = filterTests($('tFilter').value);
+  var q = function(v){ return '"' + String(v==null?'':v).replace(/"/g,'""') + '"'; };
+  var csv = [['Client','Funnel Stage','Test / Change','Why','Start Date','Decision Point','Data so far','Status','Result / Next Step'].map(q).join(',')]
+    .concat(rows.map(function(t){
+      return [t.clientName, t.funnelStage, t.testChange, t.why, String(t.startDate).slice(0,10),
+              t.decisionPoint, t.visitors, testStatus(t),
+              (t.result||'') + (t.nextStep ? ' | Next: ' + t.nextStep : '')].map(q).join(',');
+    })).join('\r\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'}));
+  a.download = 'test-record-' + today() + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('CSV downloaded');
+});
 $('cancelTest').addEventListener('click', function(){ $('testForm').hidden = true; });
-['tVis','tDecision'].forEach(function(id){ $(id).addEventListener('input', renderTests); });
+['tVis','tDecision'].forEach(function(id){ $(id).addEventListener('input', syncGate); });
+$('tStage').addEventListener('change', stageChanged);
+$('dpChips').addEventListener('click', function(e){
+  var c = e.target.closest('[data-dp]'); if (!c) return;
+  $('tDecision').value = c.dataset.dp;
+  syncGate();
+});
 $('saveTest').addEventListener('click', function(){
   var cid = $('tClient').value;
   if (!cid){ toast('Pick a client'); return; }
@@ -1684,7 +1900,8 @@ $('saveTest').addEventListener('click', function(){
     clientId: cid, clientName: c.name,
     funnelStage: $('tStage').value, testChange: $('tChange').value.trim(), why: $('tWhy').value.trim(),
     startDate: $('tStart').value || today(), decisionPoint: $('tDecision').value.trim() || '30 new sales-page visitors',
-    visitors: $('tVis').value === '' ? 0 : parseInt($('tVis').value,10),
+    visitors: (gateOf($('tDecision').value) == null) ? '' :
+              ($('tVis').value === '' ? 0 : parseInt($('tVis').value,10)),
     status: $('tStatus').value, result: $('tResult').value.trim(), nextStep: $('tNext').value.trim()
   };
   S.tests = S.tests.filter(function(x){ return String(x.id) !== String(t.id); });
