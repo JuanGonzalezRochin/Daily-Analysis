@@ -900,6 +900,28 @@ function api(action, payload){
   });
 }
 
+function altUrl(u){
+  // A Workspace-scoped URL (/a/macros/<domain>/s/<id>/exec) forces Google to resolve
+  // the request against a signed-in account. With several Google accounts logged in,
+  // that lands on an account chooser instead of the script. The account-neutral form
+  // (/macros/s/<id>/exec) is the same deployment and sidesteps it entirely.
+  var m = /^https:\/\/script\.google\.com\/a\/macros\/[^\/]+\/s\/([^\/]+)\/exec/.exec(u || '');
+  return m ? 'https://script.google.com/macros/s/' + m[1] + '/exec' : null;
+}
+
+function connectTo(u){
+  // Try the URL as given; if it fails and an account-neutral form exists, try that.
+  S.apiUrl = u; save();
+  return pull().then(function(){ return { url:u, switched:false }; })
+    .catch(function(err){
+      var alt = altUrl(u);
+      if (!alt) throw err;
+      S.apiUrl = alt; save();
+      return pull().then(function(){ return { url:alt, switched:true }; })
+        .catch(function(){ S.apiUrl = u; save(); throw err; });
+    });
+}
+
 function setConn(state, text){
   S.conn = state;
   var p = $('connPill');
@@ -1679,15 +1701,19 @@ $('connectBtn').addEventListener('click', function(){
       '<br>Workspace accounts: <code>https://script.google.com/a/macros/yourdomain.com/s/AKfy…/exec</code></div>';
     return;
   }
-  S.apiUrl = u; save();
   $('connMsg').innerHTML = '<div class="note">Connecting…</div>';
-  pull().then(function(){
-    $('connMsg').innerHTML = '<div class="note ok"><b>Connected.</b> '+activeClients().length+' active clients, '+S.summaries.length+' summaries, '+S.tests.length+' tests loaded from the sheet.</div>';
+  connectTo(u).then(function(r){
+    $('apiUrl').value = r.url;
+    $('connMsg').innerHTML = '<div class="note ok"><b>Connected.</b> '+activeClients().length+
+      ' active clients, '+S.summaries.length+' summaries, '+S.tests.length+' tests loaded from the sheet.' +
+      (r.switched ? '<br><span style="opacity:.85">Your domain URL was bounced by Google\'s account chooser, so the dashboard switched to the account-neutral form of the same deployment. Saved.</span>' : '') +
+      '</div>';
   }).catch(function(e){
     $('connMsg').innerHTML = '<div class="note bad"><b>Could not reach the web app.</b> '+esc(e.message)+
-      '<ul class="bare"><li>Deployed as a <b>Web app</b> (not an API executable or add-on).</li>' +
-      '<li><b>Execute as: Me</b>.</li>' +
-      '<li><b>Who has access: Anyone</b> — “Anyone within Grnded Agency” will NOT work here, because the browser cannot send your Google login to it from another site.</li>' +
+      '<ul class="bare">' +
+      '<li><b>If it works in incognito but not here:</b> an extension is blocking the request. uBlock/Privacy Badger/Ghostery and most VPN or "shield" extensions block <code>script.google.com</code> requests. Allow this site in the extension, or turn extensions off for this tab.</li>' +
+      '<li><b>Who has access: Anyone</b> — “Anyone within Grnded Agency” will NOT work, because the browser cannot send your Google login here from another site.</li>' +
+      '<li>Deployed as a <b>Web app</b>, <b>Execute as: Me</b>.</li>' +
       '<li>After any script edit: <b>Manage deployments → pencil → New version → Deploy</b>.</li></ul></div>';
   });
 });
@@ -1736,7 +1762,8 @@ if (!S.clients.length){
 renderAll();
 
 if (S.apiUrl){
-  pull().catch(function(){ /* cache already rendered */ });
+  connectTo(S.apiUrl).then(function(r){ $('apiUrl').value = r.url; })
+                     .catch(function(){ /* cache already rendered */ });
 } else {
   setConn('off','Not connected');
 }
